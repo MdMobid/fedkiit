@@ -270,14 +270,15 @@ const Sidebar = ({ activepage, handleChange }) => {
                 setFile={setSelectedFile}
               />
             )}
-            {authCtx.user.access !== "USER" && !isAttendanceOnly && (
+            {!isAttendanceOnly && (
               <>
                 <div
-                  style={{ position: "absolute", bottom: "5px", right: "5px" }}
+                  style={{ position: "absolute", bottom: "5px", right: "5px", cursor: "pointer" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     imgRef.current?.click();
                   }}
+                  title="Update profile picture"
                 >
                   <img src={camera.src} alt="camera" />
                 </div>
@@ -287,6 +288,7 @@ const Sidebar = ({ activepage, handleChange }) => {
                   }}
                   type="file"
                   ref={imgRef}
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
                   onChange={handleFileChange}
                 />
               </>

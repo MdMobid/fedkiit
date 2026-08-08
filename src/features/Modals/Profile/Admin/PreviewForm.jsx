@@ -654,7 +654,7 @@ const PreviewForm = ({
             <strong style={{ color: "#ff8a00", fontSize: 16 }}>&#8377;{eventAmount}</strong>
           </p>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
+          <div className={styles.paymentActionButtons}>
             {safeLink ? (
               <a
                 href={safeLink}
@@ -764,7 +764,7 @@ const PreviewForm = ({
           )}
 
           {/* ✅ Download & Copy Link Buttons */}
-          <div style={{ display: "flex", gap: "12px", marginTop: 14, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
+          <div className={styles.paymentActionButtons}>
             <button
               type="button"
               onClick={handleDownloadQR}

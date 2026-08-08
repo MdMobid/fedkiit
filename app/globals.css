@@ -1324,3 +1324,8 @@ main>div {
     font-size: 16px;
   }
 }
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #ff5500;
+}
