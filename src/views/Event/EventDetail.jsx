@@ -15,6 +15,7 @@ import AuthContext from "../../context/AuthContext";
 import { api } from "../../services";
 import { Alert, MicroLoading, ComponentLoading } from "../../microInteraction";
 import Share from "../../features/Modals/Event/ShareModal/ShareModal";
+import { isPrerequisiteMet } from "../../utils/prerequisite";
 import style from "./styles/EventDetail.module.scss";
 
 /**
@@ -42,8 +43,6 @@ const EventDetail = () => {
   const [remainingTime, setRemainingTime] = useState("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const [ongoingEvents, setOngoingEvents] = useState([]);
-  const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
-    useState(false);
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -154,29 +153,7 @@ const EventDetail = () => {
   }, [info.isRegistrationClosed, info.isEventPast, remainingTime]);
 
   useEffect(() => {
-    const registeredEventIds = authCtx.user?.regForm || [];
-    const relatedEventIds = ongoingEvents
-      .map((event) => event.info.relatedEvent)
-      .filter((id) => id !== null && id !== undefined && id !== "null")
-      .filter((id, index, self) => self.indexOf(id) === index);
-
-    if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
-      const matched = relatedEventIds.some((id) =>
-        registeredEventIds.includes(id)
-      );
-      if (matched) setIsRegisteredInRelatedEvents(true);
-    }
-  }, [ongoingEvents, authCtx.user?.regForm]);
-
-  useEffect(() => {
     if (!authCtx.isLoggedIn || !authCtx.user?.regForm || !data) return;
-
-    if (info.isRegistrationClosed) {
-      setBtnTxt("Closed");
-    }
-
-    const isRegistered = authCtx.user.regForm.includes(data.id);
-    const hasNoPrerequisite = data?.info?.relatedEvent === "null";
 
     const openState = () => {
       if (remainingTime) return remainingTime;
@@ -184,20 +161,22 @@ const EventDetail = () => {
       return "Register Now";
     };
 
-    if (isRegisteredInRelatedEvents) {
-      if (hasNoPrerequisite) {
-        if (isRegistered) setBtnTxt("Already Registered");
-      } else {
-        setBtnTxt(isRegistered ? "Already Registered" : openState());
-      }
+    if (authCtx.user.regForm.includes(data.id)) {
+      setBtnTxt("Already Registered");
       return;
     }
 
-    if (hasNoPrerequisite) {
-      setBtnTxt(isRegistered ? "Already Registered" : openState());
-    } else if (authCtx.user.access === "USER") {
+    // This event's own prerequisite, not "any prerequisite anywhere on the
+    // page" — see src/utils/prerequisite.js. Admins stay unlocked.
+    if (
+      !isPrerequisiteMet(data?.info, authCtx.user.regForm) &&
+      authCtx.user.access === "USER"
+    ) {
       setBtnTxt(data?.info?.isRegistrationClosed ? "Closed" : "Locked");
+      return;
     }
+
+    setBtnTxt(openState());
   }, [
     authCtx.isLoggedIn,
     authCtx.user?.regForm,
@@ -205,7 +184,6 @@ const EventDetail = () => {
     data,
     info.isRegistrationClosed,
     info.isEventPast,
-    isRegisteredInRelatedEvents,
     remainingTime,
   ]);
 

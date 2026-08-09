@@ -156,7 +156,6 @@ function ViewEvent({ handleChangePage }) {
                                   data={event}
                                   customStyles={customStyles}
                                   type="ongoing"
-                                  modalpath="/profile/Events/"
                                   isPastpage={true}
                                   aosDisable={true}
                                   onDelete={handleDeleteEvent}
@@ -188,7 +187,6 @@ function ViewEvent({ handleChangePage }) {
                                   data={event}
                                   customStyles={customStyles}
                                   type="past"
-                                  modalpath="/profile/Events/"
                                   isPastpage={true}
                                   aosDisable={true}
                                   onEdit={() => router.push("/profile/Form")}

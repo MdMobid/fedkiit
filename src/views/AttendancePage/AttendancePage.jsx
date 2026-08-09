@@ -424,7 +424,6 @@ const AttendancePage = () => {
                 <EventCard
                   data={event}
                   type="ongoing"
-                  modalpath="/Events/"
                   isLoading={false}
                   showRegisterButton={false}
                   showShareButton={false}
@@ -452,7 +451,6 @@ const AttendancePage = () => {
                 <EventCard
                   data={event}
                   type="past"
-                  modalpath="/Events/pastEvents/"
                   isLoading={false}
                   showRegisterButton={false}
                   showShareButton={false}

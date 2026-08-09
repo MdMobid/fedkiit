@@ -1,3 +1,16 @@
+// The page shell inside `.authpage`.
+//
+// `.authpage` is a column flex container with `align-items: center`, so its
+// child is sized shrink-to-fit on the cross axis. This wrapper had no width of
+// its own, collapsed to its content, and `.container`'s `width: 100%` then
+// resolved against that — the card rendered ~257px wide on a laptop and never
+// reached its 480px max-width.
+.page {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .container {
   position: relative;
   z-index: 10;

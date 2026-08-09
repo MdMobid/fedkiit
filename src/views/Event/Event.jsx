@@ -26,10 +26,10 @@ const Event = () => {
   const [pastEvents, setPastEvents] = useState([]);
   const [ongoingEvents, setOngoingEvents] = useState([]);
   const recoveryCtx = useContext(RecoveryContext);
-  const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
-    useState(false);
   const [eventName, setEventName] = useState("");
-  const [parentEventCount, setParentEventCount] = useState([]);
+  // A count, not a list — it was initialised to [], so `=== 0` was false until
+  // the effect below first ran.
+  const [parentEventCount, setParentEventCount] = useState(0);
 
   useEffect(() => {
     if (
@@ -140,22 +140,6 @@ const Event = () => {
       );
 
     setParentEventCount(parentEvents.length);
-
-    const relatedEventIds = ongoingEvents
-      .map((event) => event.info.relatedEvent)
-      .filter((id) => id !== null && id !== undefined && id !== "null")
-      .filter((id, index, self) => self.indexOf(id) === index);
-
-    let registeredInRelated = false;
-    if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
-      registeredInRelated = relatedEventIds.some((relatedEventId) =>
-        registeredEventIds.includes(relatedEventId)
-      );
-    }
-
-    if (registeredInRelated) {
-      setIsRegisteredInRelatedEvents(true);
-    }
   }, [ongoingEvents, pastEvents, authCtx.user.regForm]);
 
   const teamCodeAndName = {
@@ -196,8 +180,9 @@ const Event = () => {
     return `In ${months} month${months > 1 ? "s" : ""}`;
   })();
 
+  // `parentEventCount === 0` already says "has not registered for any event
+  // that gates others", which is exactly what this notice is for.
   const showPrerequisiteNotice =
-    !isRegisteredInRelatedEvents &&
     parentEventCount === 0 &&
     authCtx.isLoggedIn &&
     authCtx.user.access === "USER" &&
@@ -289,9 +274,7 @@ const Event = () => {
                     onOpen={() => {}}
                     type="ongoing"
                     variant="featured"
-                    modalpath="/Events/"
                     isLoading={false}
-                    isRegisteredInRelatedEvents={isRegisteredInRelatedEvents}
                     eventName={eventName}
                   />
                 </section>
@@ -324,9 +307,7 @@ const Event = () => {
                         data={event}
                         onOpen={() => {}}
                         type="ongoing"
-                        modalpath="/Events/"
                         isLoading={false}
-                        isRegisteredInRelatedEvents={isRegisteredInRelatedEvents}
                         eventName={eventName}
                       />
                     ))}
@@ -353,7 +334,6 @@ const Event = () => {
                         data={event}
                         onOpen={() => {}}
                         type="past"
-                        modalpath="/Events/pastEvents/"
                         isLoading={false}
                       />
                     ))}

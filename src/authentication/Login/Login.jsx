@@ -143,7 +143,7 @@ const Login = () => {
   };
 
   return (
-    <div>
+    <div className={style.page}>
       <div className={style.container}>
         <Link href={"/"}>
           <div className={style.ArrowBackIcon}>
