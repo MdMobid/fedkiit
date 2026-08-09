@@ -223,4 +223,14 @@
   .cardBody {
     padding: 18px;
   }
+  .eventCard {
+    background: rgba(18, 18, 18, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .tagBadge {
+    background: rgba(18, 18, 18, 0.88);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
 }

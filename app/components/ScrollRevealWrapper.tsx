@@ -14,31 +14,36 @@ export default function ScrollRevealWrapper({ children, instant = false }: Scrol
   useEffect(() => {
     if (instant) return;
 
+    const current = domRef.current;
+    if (!current) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsVisible(entry.isIntersecting);
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
       },
       {
-        threshold: 0.05,
-        rootMargin: "-6% 0px -6% 0px",
+        threshold: 0.02,
+        rootMargin: "0px 0px -50px 0px",
       }
     );
 
-    const current = domRef.current;
-    if (current) observer.observe(current);
+    observer.observe(current);
 
     return () => {
-      if (current) observer.unobserve(current);
+      observer.disconnect();
     };
   }, [instant]);
 
   return (
     <div
       ref={domRef}
-      className={`transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] transform will-change-[transform,opacity,filter] ${
+      className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         isVisible
-          ? "opacity-100 translate-y-0 scale-100 filter blur-0"
-          : "opacity-0 translate-y-16 scale-[0.97] filter blur-[4px]"
+          ? "opacity-100 translate-y-0 scale-100"
+          : "opacity-0 translate-y-8 scale-[0.98]"
       }`}
     >
       {children}

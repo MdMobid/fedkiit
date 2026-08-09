@@ -143,7 +143,7 @@ const Input = (props) => {
     containerStyle,
     style,
     placeholder,
-    value,
+    value = "",
     onChange,
     label,
     options,
@@ -169,6 +169,8 @@ const Input = (props) => {
     return currentDate.getTime() < selectedDate.getTime();
   };
 
+  const safeValue = value ?? "";
+
   const getInputTypes = () => {
     switch (type) {
       case "text":
@@ -179,7 +181,7 @@ const Input = (props) => {
             type={type}
             style={style || {}}
             placeholder={placeholder}
-            value={value}
+            value={safeValue}
             onChange={onChange}
             {...rest}
           />
@@ -193,7 +195,7 @@ const Input = (props) => {
             type={type}
             style={style || {}}
             placeholder={placeholder}
-            value={value}
+            value={safeValue}
             onChange={onChange}
             {...rest}
           />
@@ -207,7 +209,7 @@ const Input = (props) => {
             type={type}
             style={style || {}}
             placeholder={placeholder}
-            value={value}
+            value={safeValue}
             onChange={onChange}
             {...rest}
           />
@@ -281,31 +283,20 @@ const Input = (props) => {
         );
       case "radio":
         return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
+          <div className={styles.checkboxWrapper}>
             <input
               name={name}
-              className={styles.input}
-              type={type}
-              style={{ width: "auto" }}
+              className={styles.checkboxInput}
+              type="radio"
               placeholder={placeholder}
               value={value}
               onChange={onChange}
+              id={rest.id || `${name}-${value}`}
               {...rest}
             />
             <label
-              style={{
-                color: "#fff",
-                fontSize: ".8em",
-                marginLeft: "2px",
-                marginTop: "-5px",
-              }}
-              htmlFor={name}
+              className={styles.checkboxLabel}
+              htmlFor={rest.id || `${name}-${value}`}
             >
               {label}
             </label>
@@ -313,31 +304,20 @@ const Input = (props) => {
         );
       case "checkbox":
         return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
+          <div className={styles.checkboxWrapper}>
             <input
               name={name}
-              className={styles.input}
-              type={type}
-              style={{ width: "auto" }}
+              className={styles.checkboxInput}
+              type="checkbox"
               placeholder={placeholder}
               value={value}
               onChange={onChange}
+              id={rest.id || `${name}-${value}`}
               {...rest}
             />
             <label
-              style={{
-                color: "#fff",
-                fontSize: ".8em",
-                marginLeft: "2px",
-                marginTop: "-5px",
-              }}
-              htmlFor={name}
+              className={styles.checkboxLabel}
+              htmlFor={rest.id || `${name}-${value}`}
             >
               {label}
             </label>
@@ -360,7 +340,7 @@ const Input = (props) => {
                 type={showPassword ? "text" : "password"}
                 style={style || {}}
                 placeholder={placeholder}
-                value={value}
+                value={safeValue}
                 onChange={onChange}
                 {...rest}
               />
@@ -515,7 +495,7 @@ const Input = (props) => {
             type={type}
             style={style || {}}
             placeholder={placeholder}
-            value={value}
+            value={safeValue}
             onChange={onChange}
             {...rest}
           />

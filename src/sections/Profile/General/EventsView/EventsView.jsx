@@ -85,6 +85,8 @@ const Events = () => {
 
   useEffect(() => {
     const fetchCertificates = async () => {
+      if (authCtx.user?.access !== "ADMIN") return;
+
       try {
         const response = await api.post(
           "/api/certificate/sendCertificatesAndEvents",
@@ -95,17 +97,18 @@ const Events = () => {
             headers: { Authorization: `Bearer ${authCtx.token}` },
           }
         );
-        // console.log(response);
         if (response.status === 200) {
-          setCertificates(response.data.certandevent); // This will be an array of { cert, event }
+          setCertificates(response.data.certandevent);
         }
       } catch (err) {
         console.error("Error fetching certificates:", err);
       }
     };
 
-    fetchCertificates();
-  }, [authCtx.user.email]);
+    if (authCtx.user?.access === "ADMIN") {
+      fetchCertificates();
+    }
+  }, [authCtx.user?.email, authCtx.user?.access, authCtx.token]);
 
   const getCertificateForEvent = async (eventId) => {
     const eid = await accessOrCreateEventByFormId(eventId, authCtx.token);
