@@ -309,10 +309,18 @@ $poster-stretch: 1.19;
 }
 
 // The bar sits over the poster; on a narrow card the three buttons need room
-// to wrap rather than run off the edge.
-@media (max-width: 560px) {
+// to wrap rather than run off the edge. They also become the primary way an
+// admin reaches Analytics on a phone, so they get a full touch target — they
+// measured 32px tall, under the usual 44px minimum.
+@media (max-width: 768px) {
   .adminBar {
     max-width: calc(100% - 24px);
+  }
+
+  .adminBtn {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 0.8125rem;
   }
 }
 
