@@ -151,29 +151,33 @@ const EventCard = (props) => {
     return () => clearInterval(intervalId);
   }, []);
 
+  /**
+   * The single owner of the button label.
+   *
+   * This was two effects that both wrote `btnTxt`: one for the impersonal
+   * states (Closed / countdown / Register Now) and one for the personalised
+   * ones (Already Registered / Locked). The personalised effect bailed out with
+   * a bare `return` when signed out, so logging out left "Already Registered"
+   * on screen — it re-ran, wrote nothing, and the other effect only re-runs
+   * when the countdown or the closed flag changes, which logging out does not
+   * do. Deriving the whole label in one place means every input, including
+   * signing out, always produces a complete answer.
+   */
   useEffect(() => {
-    if (info.isRegistrationClosed) {
-      setBtnTxt("Closed");
-    } else if (remainingTime) {
-      if (authCtx.user.access === "USER") {
-        setBtnTxt("Locked");
-      }
-      setBtnTxt(remainingTime);
-    } else {
-      setBtnTxt("Register Now");
-    }
-  }, [info.isRegistrationClosed, remainingTime]);
-
-  useEffect(() => {
-    if (!authCtx.isLoggedIn || !authCtx.user.regForm) return;
-
     const openState = () => {
       if (remainingTime) return remainingTime;
-      if (data?.info?.isRegistrationClosed) return "Closed";
+      if (info.isRegistrationClosed) return "Closed";
       return "Register Now";
     };
 
-    if (authCtx.user.regForm.includes(data.id)) {
+    // Signed out — or still restoring the session — shows nobody's personal
+    // state.
+    if (!authCtx.isLoggedIn) {
+      setBtnTxt(openState());
+      return;
+    }
+
+    if ((authCtx.user.regForm || []).includes(data.id)) {
       setBtnTxt("Already Registered");
       return;
     }
@@ -181,7 +185,7 @@ const EventCard = (props) => {
     // Locked until this event's own prerequisite is met. Admins are exempt so
     // they can still open a gated form to check it.
     if (!prerequisiteMet && authCtx.user.access === "USER") {
-      setBtnTxt(data?.info?.isRegistrationClosed ? "Closed" : "Locked");
+      setBtnTxt(info.isRegistrationClosed ? "Closed" : "Locked");
       return;
     }
 
@@ -191,6 +195,7 @@ const EventCard = (props) => {
     authCtx.user.regForm,
     authCtx.user.access,
     data,
+    info.isRegistrationClosed,
     prerequisiteMet,
     remainingTime,
   ]);

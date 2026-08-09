@@ -142,26 +142,22 @@ const EventDetail = () => {
     }
   }, [info.regDateAndTime, calculateRemainingTime]);
 
+  // One effect owns the label, for the reason spelled out in EventCard: an
+  // early `return` on the signed-out path left the previous user's "Already
+  // Registered" on screen after logging out.
   useEffect(() => {
-    if (info.isRegistrationClosed || info.isEventPast) {
-      setBtnTxt("Closed");
-    } else if (remainingTime) {
-      setBtnTxt(remainingTime);
-    } else {
-      setBtnTxt("Register Now");
-    }
-  }, [info.isRegistrationClosed, info.isEventPast, remainingTime]);
-
-  useEffect(() => {
-    if (!authCtx.isLoggedIn || !authCtx.user?.regForm || !data) return;
-
     const openState = () => {
       if (remainingTime) return remainingTime;
-      if (data?.info?.isRegistrationClosed) return "Closed";
+      if (info.isRegistrationClosed || info.isEventPast) return "Closed";
       return "Register Now";
     };
 
-    if (authCtx.user.regForm.includes(data.id)) {
+    if (!authCtx.isLoggedIn || !data) {
+      setBtnTxt(openState());
+      return;
+    }
+
+    if ((authCtx.user?.regForm || []).includes(data.id)) {
       setBtnTxt("Already Registered");
       return;
     }
@@ -169,10 +165,10 @@ const EventDetail = () => {
     // This event's own prerequisite, not "any prerequisite anywhere on the
     // page" — see src/utils/prerequisite.js. Admins stay unlocked.
     if (
-      !isPrerequisiteMet(data?.info, authCtx.user.regForm) &&
-      authCtx.user.access === "USER"
+      !isPrerequisiteMet(data?.info, authCtx.user?.regForm) &&
+      authCtx.user?.access === "USER"
     ) {
-      setBtnTxt(data?.info?.isRegistrationClosed ? "Closed" : "Locked");
+      setBtnTxt(info.isRegistrationClosed || info.isEventPast ? "Closed" : "Locked");
       return;
     }
 
