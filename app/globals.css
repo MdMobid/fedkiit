@@ -1255,6 +1255,7 @@ main>div {
   animation-delay: 0.5s;
   opacity: 0;
 }
+
 /* ─── Signed-in avatar in the navbar ────────────────────────────────
  * Replaces the Login pill once a session is restored, matching what the
  * previous navbar did. Sized to the pill's height so swapping between the
@@ -1316,9 +1317,15 @@ main>div {
  * Applies only below the tablet breakpoint, so the compact desktop styling of
  * the admin forms is untouched. */
 @media (max-width: 768px) {
+
   input,
   select,
   textarea {
     font-size: 16px;
   }
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #ff5500;
 }
