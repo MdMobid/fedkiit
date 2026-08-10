@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import styles from "./styles/LiveEventPopup.module.scss";
 import { api } from "../../../../services";
+import { cdn } from "../../../../utils/cloudinary";
 
 const LiveEventPopup = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -76,7 +77,7 @@ const LiveEventPopup = () => {
               ×
             </button>
             <a href="/Events">
-              <img src={eventImage} alt="Event" className={styles.popupContent} />
+              <img src={cdn(eventImage, 600)} alt="Event" className={styles.popupContent} loading="lazy" decoding="async" />
             </a>
           </div>
         </div>

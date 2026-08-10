@@ -284,11 +284,44 @@ $poster-stretch: 1.19;
   right: 12px;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
   padding: 6px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background-color: rgba(0, 0, 0, 0.82);
+}
+
+// The reveal-on-hover only applies where hovering is possible. A touch screen
+// matches `hover: none`, so the bar stays visible there instead of being
+// unreachable — which is what happened when this was a JS `isHovered` flag.
+@media (hover: hover) and (pointer: fine) {
+  .adminBar {
+    opacity: 0;
+    transition: opacity 160ms var(--ease);
+  }
+
+  .card:hover .adminBar,
+  .adminBar:focus-within {
+    opacity: 1;
+  }
+}
+
+// The bar sits over the poster; on a narrow card the three buttons need room
+// to wrap rather than run off the edge. They also become the primary way an
+// admin reaches Analytics on a phone, so they get a full touch target — they
+// measured 32px tall, under the usual 44px minimum.
+@media (max-width: 768px) {
+  .adminBar {
+    max-width: calc(100% - 24px);
+  }
+
+  .adminBtn {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 0.8125rem;
+  }
 }
 
 .adminBtn {

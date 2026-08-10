@@ -15,13 +15,14 @@ import { Blurhash } from "react-blurhash";
 import { Alert, MicroLoading } from "../../microInteraction";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { isPrerequisiteMet } from "../../utils/prerequisite";
+import { cdn } from "../../utils/cloudinary";
 
 const EventCard = (props) => {
   const {
     data,
     onOpen,
     type,
-    modalpath,
     showShareButton = true,
     showRegisterButton = true,
     additionalContent,
@@ -29,7 +30,6 @@ const EventCard = (props) => {
     onDelete,
     enableEdit,
     isLoading,
-    isRegisteredInRelatedEvents,
     eventName,
     variant = "default",
   } = props;
@@ -38,7 +38,6 @@ const EventCard = (props) => {
   const authCtx = useContext(AuthContext);
   const [isOpen, setOpen] = useState(false);
   const [isQRModalOpen, setQRModalOpen] = useState(false);
-  const [isHovered, setisHovered] = useState(false);
   const [remainingTime, setRemainingTime] = useState("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const router = useRouter();
@@ -97,6 +96,10 @@ const EventCard = (props) => {
     }
   };
 
+  // Per-event, not per-page: this card's own prerequisite against this
+  // visitor's own registrations.
+  const prerequisiteMet = isPrerequisiteMet(info, authCtx.user?.regForm);
+
   const dayWithSuffix = day + getOrdinalSuffix(day);
   const month = date.toLocaleDateString("en-GB", { month: "long" });
   const year = date.getFullYear();
@@ -148,68 +151,52 @@ const EventCard = (props) => {
     return () => clearInterval(intervalId);
   }, []);
 
+  /**
+   * The single owner of the button label.
+   *
+   * This was two effects that both wrote `btnTxt`: one for the impersonal
+   * states (Closed / countdown / Register Now) and one for the personalised
+   * ones (Already Registered / Locked). The personalised effect bailed out with
+   * a bare `return` when signed out, so logging out left "Already Registered"
+   * on screen — it re-ran, wrote nothing, and the other effect only re-runs
+   * when the countdown or the closed flag changes, which logging out does not
+   * do. Deriving the whole label in one place means every input, including
+   * signing out, always produces a complete answer.
+   */
   useEffect(() => {
-    if (info.isRegistrationClosed) {
-      setBtnTxt("Closed");
-    } else if (remainingTime) {
-      if (authCtx.user.access === "USER") {
-        setBtnTxt("Locked");
-      }
-      setBtnTxt(remainingTime);
-    } else {
-      setBtnTxt("Register Now");
-    }
-  }, [info.isRegistrationClosed, remainingTime]);
+    const openState = () => {
+      if (remainingTime) return remainingTime;
+      if (info.isRegistrationClosed) return "Closed";
+      return "Register Now";
+    };
 
-  useEffect(() => {
-    if (authCtx.isLoggedIn && authCtx.user.regForm) {
-      if (isRegisteredInRelatedEvents) {
-        if (data?.info?.relatedEvent === "null") {
-          if (authCtx.user.regForm.includes(data.id)) {
-            setBtnTxt("Already Registered");
-          }
-        } else {
-          if (authCtx.user.regForm.includes(data.id)) {
-            setBtnTxt("Already Registered");
-          } else {
-            if (remainingTime) {
-              setBtnTxt(remainingTime);
-            } else if (data?.info?.isRegistrationClosed) {
-              setBtnTxt("Closed");
-            } else {
-              setBtnTxt("Register Now");
-            }
-          }
-        }
-      } else {
-        if (data?.info?.relatedEvent === "null") {
-          if (authCtx.user.regForm.includes(data.id)) {
-            setBtnTxt("Already Registered");
-          } else {
-            if (remainingTime) {
-              setBtnTxt(remainingTime);
-            } else if (data?.info?.isRegistrationClosed) {
-              setBtnTxt("Closed");
-            } else {
-              setBtnTxt("Register Now");
-            }
-          }
-        } else {
-          if (authCtx.user.access === "USER") {
-            if (data?.info?.isRegistrationClosed) {
-              setBtnTxt("Closed");
-            } else {
-              setBtnTxt("Locked");
-            }
-          }
-        }
-      }
+    // Signed out — or still restoring the session — shows nobody's personal
+    // state.
+    if (!authCtx.isLoggedIn) {
+      setBtnTxt(openState());
+      return;
     }
+
+    if ((authCtx.user.regForm || []).includes(data.id)) {
+      setBtnTxt("Already Registered");
+      return;
+    }
+
+    // Locked until this event's own prerequisite is met. Admins are exempt so
+    // they can still open a gated form to check it.
+    if (!prerequisiteMet && authCtx.user.access === "USER") {
+      setBtnTxt(info.isRegistrationClosed ? "Closed" : "Locked");
+      return;
+    }
+
+    setBtnTxt(openState());
   }, [
     authCtx.isLoggedIn,
     authCtx.user.regForm,
+    authCtx.user.access,
     data,
-    isRegisteredInRelatedEvents,
+    info.isRegistrationClosed,
+    prerequisiteMet,
     remainingTime,
   ]);
 
@@ -264,7 +251,7 @@ const EventCard = (props) => {
     ) {
       setAlert({
         type: "info",
-        message: `You need to register for ${eventName} first`,
+        message: `You need to register for ${eventName || "the required event"} first`,
         position: "bottom-right",
         duration: 3000,
       });
@@ -324,7 +311,16 @@ const EventCard = (props) => {
     }
   };
 
-  const detailsHref = modalpath + data.id;
+  // Every event -- upcoming, past, or viewed from the admin panel -- is served
+  // by the single /Events/[eventId] route, so the card builds its own link
+  // rather than trusting the caller.
+  //
+  // This used to be `modalpath + data.id`, from when `modalpath` named a modal
+  // and was never navigated to. Turning the title into a real <Link> made those
+  // strings live URLs, and three of the four callers were passing paths that
+  // have no route: "/pastEvents/", "/Events/pastEvents/" and "/profile/Events/".
+  // Every past-event card on the site 404'd as a result.
+  const detailsHref = `/Events/${data.id}`;
   // Built from the origin, not from the current href - appending the id to
   // whatever page you happen to be on produced links like /Events/x/y.
   const shareUrl =
@@ -423,8 +419,6 @@ const EventCard = (props) => {
   return (
     <article
       className={`${style.card} ${variant === "featured" ? style.featured : ""}`}
-      onMouseEnter={() => setisHovered(true)}
-      onMouseLeave={() => setisHovered(false)}
     >
       {variant === "featured" && (
         <div className={style.techPattern} aria-hidden="true">
@@ -536,11 +530,12 @@ const EventCard = (props) => {
         {/* Cropped from the bottom rather than the centre — see `.image` in the
             stylesheet for why. */}
         <img
-          src={info.eventImg}
+          src={cdn(info.eventImg, variant === "featured" ? 1000 : 700)}
           className={style.image}
           style={{ opacity: imageLoaded ? 1 : 0 }}
           alt=""
           loading="lazy"
+          decoding="async"
           onLoad={() => setImageLoaded(true)}
         />
         <span className={style.badge} data-tone={status.tone}>
@@ -625,7 +620,12 @@ const EventCard = (props) => {
         </div>
       </div>
 
-      {enableEdit && isHovered && authCtx.user.access === "ADMIN" && (
+      {/* Always rendered. It used to be gated on an `isHovered` state, which no
+          touch device ever sets — so admins on a phone could not reach Edit,
+          Delete or Analytics at all. The fade-in on hover now lives in CSS,
+          behind `@media (hover: hover)`, so pointer devices keep the reveal and
+          touch devices simply always see the bar. */}
+      {enableEdit && authCtx.user.access === "ADMIN" && (
         <div className={style.adminBar}>
           <button
             type="button"
@@ -683,7 +683,6 @@ EventCard.propTypes = {
   data: PropTypes.object.isRequired,
   onOpen: PropTypes.func,
   type: PropTypes.string.isRequired,
-  modalpath: PropTypes.string.isRequired,
   customStyles: PropTypes.object,
   showShareButton: PropTypes.bool,
   showRegisterButton: PropTypes.bool,

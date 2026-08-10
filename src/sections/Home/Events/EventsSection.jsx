@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "../../../services";
 import styles from "./styles/EventsSection.module.scss";
+import { cdn } from "../../../utils/cloudinary";
 
 /** Shown when an event carries no image of its own. */
 const EVENT_BANNER_FALLBACK = "/fedkiit-logo.png";
@@ -135,7 +136,7 @@ export default function HomeEventsSection() {
                 <div className={styles.eventCard}>
                   {/* Top Image Banner with Tag Overlay */}
                   <div className={styles.cardImageWrapper}>
-                    <img src={ev.banner} alt={ev.title} className={styles.cardImage} />
+                    <img src={cdn(ev.banner, 700)} alt={ev.title} className={styles.cardImage} loading="lazy" decoding="async" />
                     <span className={styles.tagBadge}>{ev.tag}</span>
                   </div>
 

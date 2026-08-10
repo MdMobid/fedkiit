@@ -15,6 +15,7 @@ import AuthContext from "../../context/AuthContext";
 import { api } from "../../services";
 import { Alert, MicroLoading, ComponentLoading } from "../../microInteraction";
 import Share from "../../features/Modals/Event/ShareModal/ShareModal";
+import { isPrerequisiteMet } from "../../utils/prerequisite";
 import style from "./styles/EventDetail.module.scss";
 
 /**
@@ -42,8 +43,6 @@ const EventDetail = () => {
   const [remainingTime, setRemainingTime] = useState("");
   const [btnTxt, setBtnTxt] = useState("Register Now");
   const [ongoingEvents, setOngoingEvents] = useState([]);
-  const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
-    useState(false);
   const [isShareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -143,61 +142,37 @@ const EventDetail = () => {
     }
   }, [info.regDateAndTime, calculateRemainingTime]);
 
+  // One effect owns the label, for the reason spelled out in EventCard: an
+  // early `return` on the signed-out path left the previous user's "Already
+  // Registered" on screen after logging out.
   useEffect(() => {
-    if (info.isRegistrationClosed || info.isEventPast) {
-      setBtnTxt("Closed");
-    } else if (remainingTime) {
-      setBtnTxt(remainingTime);
-    } else {
-      setBtnTxt("Register Now");
-    }
-  }, [info.isRegistrationClosed, info.isEventPast, remainingTime]);
-
-  useEffect(() => {
-    const registeredEventIds = authCtx.user?.regForm || [];
-    const relatedEventIds = ongoingEvents
-      .map((event) => event.info.relatedEvent)
-      .filter((id) => id !== null && id !== undefined && id !== "null")
-      .filter((id, index, self) => self.indexOf(id) === index);
-
-    if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
-      const matched = relatedEventIds.some((id) =>
-        registeredEventIds.includes(id)
-      );
-      if (matched) setIsRegisteredInRelatedEvents(true);
-    }
-  }, [ongoingEvents, authCtx.user?.regForm]);
-
-  useEffect(() => {
-    if (!authCtx.isLoggedIn || !authCtx.user?.regForm || !data) return;
-
-    if (info.isRegistrationClosed) {
-      setBtnTxt("Closed");
-    }
-
-    const isRegistered = authCtx.user.regForm.includes(data.id);
-    const hasNoPrerequisite = data?.info?.relatedEvent === "null";
-
     const openState = () => {
       if (remainingTime) return remainingTime;
-      if (data?.info?.isRegistrationClosed) return "Closed";
+      if (info.isRegistrationClosed || info.isEventPast) return "Closed";
       return "Register Now";
     };
 
-    if (isRegisteredInRelatedEvents) {
-      if (hasNoPrerequisite) {
-        if (isRegistered) setBtnTxt("Already Registered");
-      } else {
-        setBtnTxt(isRegistered ? "Already Registered" : openState());
-      }
+    if (!authCtx.isLoggedIn || !data) {
+      setBtnTxt(openState());
       return;
     }
 
-    if (hasNoPrerequisite) {
-      setBtnTxt(isRegistered ? "Already Registered" : openState());
-    } else if (authCtx.user.access === "USER") {
-      setBtnTxt(data?.info?.isRegistrationClosed ? "Closed" : "Locked");
+    if ((authCtx.user?.regForm || []).includes(data.id)) {
+      setBtnTxt("Already Registered");
+      return;
     }
+
+    // This event's own prerequisite, not "any prerequisite anywhere on the
+    // page" — see src/utils/prerequisite.js. Admins stay unlocked.
+    if (
+      !isPrerequisiteMet(data?.info, authCtx.user?.regForm) &&
+      authCtx.user?.access === "USER"
+    ) {
+      setBtnTxt(info.isRegistrationClosed || info.isEventPast ? "Closed" : "Locked");
+      return;
+    }
+
+    setBtnTxt(openState());
   }, [
     authCtx.isLoggedIn,
     authCtx.user?.regForm,
@@ -205,7 +180,6 @@ const EventDetail = () => {
     data,
     info.isRegistrationClosed,
     info.isEventPast,
-    isRegisteredInRelatedEvents,
     remainingTime,
   ]);
 

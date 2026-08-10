@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 
 import { api } from "../../services";
 import style from "./styles/Event.module.scss";
@@ -26,10 +26,10 @@ const Event = () => {
   const [pastEvents, setPastEvents] = useState([]);
   const [ongoingEvents, setOngoingEvents] = useState([]);
   const recoveryCtx = useContext(RecoveryContext);
-  const [isRegisteredInRelatedEvents, setIsRegisteredInRelatedEvents] =
-    useState(false);
   const [eventName, setEventName] = useState("");
-  const [parentEventCount, setParentEventCount] = useState([]);
+  // A count, not a list — it was initialised to [], so `=== 0` was false until
+  // the effect below first ran.
+  const [parentEventCount, setParentEventCount] = useState(0);
 
   useEffect(() => {
     if (
@@ -113,15 +113,29 @@ const Event = () => {
     }
   };
 
-  useEffect(() => {
-    const eventWithNullRelated = ongoingEvents.find(
-      (event) => event.info.relatedEvent === "null"
-    );
+  // Resolves an event's prerequisite to its title.
+  //
+  // The "you need to register for X first" toast used to name whichever event
+  // happened to be listed first with no prerequisite of its own — a page-level
+  // guess that had nothing to do with the card being clicked. On this data it
+  // told people to go and register for "Form test" when the event actually
+  // required Omega4.0, which is worse than saying nothing.
+  const prerequisiteTitleOf = useCallback(
+    (event) => {
+      const id = event?.info?.relatedEvent;
+      if (!id || id === "null") return "";
+      const all = [...ongoingEvents, ...pastEvents];
+      return all.find((e) => e.id === id)?.info?.eventTitle ?? "";
+    },
+    [ongoingEvents, pastEvents]
+  );
 
-    setEventName(
-      eventWithNullRelated ? eventWithNullRelated.info.eventTitle : ""
-    );
-  }, [ongoingEvents]);
+  // The page-level banner names the prerequisite the gated events on this page
+  // actually point at, for the same reason.
+  useEffect(() => {
+    const gated = ongoingEvents.find((event) => prerequisiteTitleOf(event));
+    setEventName(gated ? prerequisiteTitleOf(gated) : "");
+  }, [ongoingEvents, prerequisiteTitleOf]);
 
   useEffect(() => {
     const registeredEventIds = authCtx.user.regForm || [];
@@ -140,22 +154,6 @@ const Event = () => {
       );
 
     setParentEventCount(parentEvents.length);
-
-    const relatedEventIds = ongoingEvents
-      .map((event) => event.info.relatedEvent)
-      .filter((id) => id !== null && id !== undefined && id !== "null")
-      .filter((id, index, self) => self.indexOf(id) === index);
-
-    let registeredInRelated = false;
-    if (registeredEventIds.length > 0 && relatedEventIds.length > 0) {
-      registeredInRelated = relatedEventIds.some((relatedEventId) =>
-        registeredEventIds.includes(relatedEventId)
-      );
-    }
-
-    if (registeredInRelated) {
-      setIsRegisteredInRelatedEvents(true);
-    }
   }, [ongoingEvents, pastEvents, authCtx.user.regForm]);
 
   const teamCodeAndName = {
@@ -196,8 +194,9 @@ const Event = () => {
     return `In ${months} month${months > 1 ? "s" : ""}`;
   })();
 
+  // `parentEventCount === 0` already says "has not registered for any event
+  // that gates others", which is exactly what this notice is for.
   const showPrerequisiteNotice =
-    !isRegisteredInRelatedEvents &&
     parentEventCount === 0 &&
     authCtx.isLoggedIn &&
     authCtx.user.access === "USER" &&
@@ -289,10 +288,8 @@ const Event = () => {
                     onOpen={() => {}}
                     type="ongoing"
                     variant="featured"
-                    modalpath="/Events/"
                     isLoading={false}
-                    isRegisteredInRelatedEvents={isRegisteredInRelatedEvents}
-                    eventName={eventName}
+                    eventName={prerequisiteTitleOf(spotlight)}
                   />
                 </section>
               ) : (
@@ -324,10 +321,8 @@ const Event = () => {
                         data={event}
                         onOpen={() => {}}
                         type="ongoing"
-                        modalpath="/Events/"
                         isLoading={false}
-                        isRegisteredInRelatedEvents={isRegisteredInRelatedEvents}
-                        eventName={eventName}
+                        eventName={prerequisiteTitleOf(event)}
                       />
                     ))}
                   </div>
@@ -353,7 +348,6 @@ const Event = () => {
                         data={event}
                         onOpen={() => {}}
                         type="past"
-                        modalpath="/Events/pastEvents/"
                         isLoading={false}
                       />
                     ))}

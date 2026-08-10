@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import styles from "./styles/HeroGallery.module.scss";
+import { cdn } from "../../utils/cloudinary";
 
 const INTERVAL_MS = 3200;
 
@@ -69,10 +70,16 @@ function HeroGallery({ images }) {
               }
               aria-current={offset === 0 ? "true" : undefined}
             >
+              {/* Every slide is mounted at once so the carousel can animate
+                  between them, so all ten originals were downloaded and
+                  decoded up front — several of them 4000-6000px wide for a
+                  box under 400px. */}
               <img
-                src={image.image}
+                src={cdn(image.image, 700)}
                 alt={image.title || `Gallery photo ${index + 1}`}
                 draggable={false}
+                loading={Math.abs(offset) <= 1 ? "eager" : "lazy"}
+                decoding="async"
               />
             </button>
           );

@@ -5,6 +5,7 @@ import styles from "./styles/Hero.module.scss";
 import CarouselImg from "../../../data/Carousel.json";
 import HeroGallery from "../../../components/HeroGallery/HeroGallery";
 import { AnimatedBox } from "../../../assets/animations/AnimatedBox";
+import { cdn } from "../../../utils/cloudinary";
 
 const titles = [
   "Entrepreneurship.",
@@ -82,7 +83,7 @@ function Hero() {
       <div className={styles.hero}>
         <div className={styles.heroTextContainer}>
           <div className={styles.textBackdrop} aria-hidden="true">
-            <img src="/assets/design-3.png" alt="" />
+            <img src={cdn("/assets/design-3.png", 384)} alt="" loading="lazy" decoding="async" />
           </div>
           <AnimatedBox direction="left">
             <div className={styles.textContent}>

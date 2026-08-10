@@ -6,7 +6,6 @@ import AuthContext from "../../../../context/AuthContext";
 
 import { api } from "../../../../services";
 import { ComponentLoading, MicroLoading } from "../../../../microInteraction";
-import { accessOrCreateEventByFormId } from "../../Admin/Form/CertificatesForm/tools/certificateTools";
 import Link from "next/link";
 
 const Events = () => {
@@ -18,7 +17,9 @@ const Events = () => {
   const [certMap, setCertMap] = useState({});
   const [loadingCerts, setLoadingCerts] = useState(true); // New state for certificate loading
 
-  const viewPath = "/profile/Events";
+  // The public event page. There is no /profile/Events route, so the View
+  // button in this table used to 404.
+  const viewPath = "/Events";
   const analyticsPath = "/profile/events/Analytics";
 
   const analyticsAccessRoles = [
@@ -84,8 +85,12 @@ const Events = () => {
   }, [authCtx.user.email]);
 
   useEffect(() => {
+    // Not admin-gated. This is the participant's own certificate list, and the
+    // endpoint now authorises "your own email, or any email if you are an
+    // admin" — gating it here left every ordinary member with an empty list and
+    // a View button that led nowhere.
     const fetchCertificates = async () => {
-      if (authCtx.user?.access !== "ADMIN") return;
+      if (!authCtx.user?.email) return;
 
       try {
         const response = await api.post(
@@ -105,16 +110,22 @@ const Events = () => {
       }
     };
 
-    if (authCtx.user?.access === "ADMIN") {
-      fetchCertificates();
-    }
-  }, [authCtx.user?.email, authCtx.user?.access, authCtx.token]);
+    fetchCertificates();
+  }, [authCtx.user?.email, authCtx.token]);
 
-  const getCertificateForEvent = async (eventId) => {
-    const eid = await accessOrCreateEventByFormId(eventId, authCtx.token);
-    // console.log(eid, certificates[0].cert.eventId);
-    const found = certificates.find((item) => item.cert.eventId == eid.id);
-    // console.log(found);
+  /**
+   * Certificates are issued against an `Event`, while this table lists forms,
+   * so the two are matched on the `formId` the Event carries.
+   *
+   * This used to call `accessOrCreateEventByFormId`, which posts to
+   * /api/certificate/getEventByFormId and falls back to
+   * /api/certificate/createOrganisationEvent. Neither route was ever ported, so
+   * every lookup 404'd, threw on `eid.id`, and left the map empty — a second,
+   * independent reason the View button led nowhere. The joined event now comes
+   * back with the certificate itself, so no extra request is needed.
+   */
+  const getCertificateForEvent = (formId) => {
+    const found = certificates.find((item) => item.event?.formId === formId);
     return found ? found.cert : null;
   };
 
@@ -131,29 +142,16 @@ const Events = () => {
       .replace(/\//g, "-");
   };
 
+  // Pure lookups against data already in hand, so this is a plain synchronous
+  // pass rather than one request per event.
   useEffect(() => {
-    const fetchAllCerts = async () => {
-      setLoadingCerts(true); // Start loading
-      const map = {};
-      if (events.length > 0) {
-        for (const event of events) {
-          const cert = await getCertificateForEvent(event.id, authCtx.token);
-          if (cert) {
-            const link = `/verify/certificate?id=${cert.id}`;
-            map[event.id] = link;
-          }
-        }
-      }
-      setCertMap(map);
-      setLoadingCerts(false); // End loading
-    };
-
-    if (events.length > 0 && certificates.length > 0) {
-      fetchAllCerts();
-    } else if (events.length > 0 && !isLoading) {
-      // If events are loaded but no certificates found
-      setLoadingCerts(false);
+    const map = {};
+    for (const event of events) {
+      const cert = getCertificateForEvent(event.id);
+      if (cert) map[event.id] = `/verify/certificate?id=${cert.id}`;
     }
+    setCertMap(map);
+    setLoadingCerts(false);
   }, [events, certificates]);
 
   return (
