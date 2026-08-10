@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { SafeUser } from "@/lib/auth/access";
+import { FORM_ANALYTICS_ROLES } from "@/lib/auth/roles";
+import { envList, getEnv } from "@/lib/env";
 
 /**
  * Who may do what, declared once.
@@ -15,18 +17,7 @@ import type { SafeUser } from "@/lib/auth/access";
  */
 export const PERMISSIONS = {
   /** Read a form's registration analytics (EventStats). */
-  FORM_ANALYTICS_VIEW: new Set<string>([
-    "PRESIDENT",
-    "VICEPRESIDENT",
-    "DIRECTOR_CREATIVE",
-    "DIRECTOR_TECHNICAL",
-    "DIRECTOR_MARKETING",
-    "DIRECTOR_OPERATIONS",
-    // Not a member of the AccessTypes enum, so it can never match. Carried over
-    // from the Express controller, where it was equally dead; kept so the list
-    // stays a faithful copy rather than a silent narrowing.
-    "DIRECTOR_SPONSORSHIP",
-  ]),
+  FORM_ANALYTICS_VIEW: new Set<string>(FORM_ANALYTICS_ROLES),
 } satisfies Record<string, ReadonlySet<string>>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -42,4 +33,27 @@ export function can(
   if (!user) return false;
   if (user.access === "ADMIN") return true;
   return PERMISSIONS[permission].has(user.access);
+}
+
+/**
+ * The whole of the Express analytics rule, in one place:
+ *
+ *   if (!allowedUsers.includes(req.user.access) && req.user.email != "srex@…")
+ *
+ * The address list moved to `FORM_ANALYTICS_ALLOWED_EMAILS` in the environment.
+ *
+ * Both the API route and the page that renders EventStats call this, so the
+ * page can no longer refuse someone the endpoint would have served — which is
+ * exactly what happened when the page checked `isAdmin` on its own.
+ */
+export function canViewFormAnalytics(
+  user: Pick<SafeUser, "access" | "email"> | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (can(user, "FORM_ANALYTICS_VIEW")) return true;
+
+  const allowed = envList(getEnv().FORM_ANALYTICS_ALLOWED_EMAILS).map((entry) =>
+    entry.toLowerCase(),
+  );
+  return allowed.includes(user.email.toLowerCase());
 }

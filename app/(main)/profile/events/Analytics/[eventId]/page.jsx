@@ -6,14 +6,20 @@
 // was written and exported from the modals barrel, but nothing ever mounted it
 // — so the button 404'd and the component was dead code.
 //
-// Gated to ADMIN on the server, matching /profile/attendance: `proxy.ts` only
-// checks for a valid session, not a role, so without this any signed-in
-// participant who typed the path would see every registrant's email and
-// payment screenshot.
+// Gated on the server, because `proxy.ts` only checks for a valid session, not
+// a role — without this any signed-in participant who typed the path would see
+// every registrant's email and payment screenshot.
+//
+// The gate is `canViewFormAnalytics`, the same rule the endpoint this page
+// calls enforces. It was `isAdmin` at first, which was narrower than both the
+// API and the Express-era route (`access !== "USER"` in App.jsx) — so a
+// president or director was shown the Analytics button by EventsView, and then
+// bounced back to /profile by this line when they clicked it.
 
 import { redirect } from "next/navigation";
 
-import { getCurrentUser, isAdmin } from "@/lib/auth/access";
+import { getCurrentUser } from "@/lib/auth/access";
+import { canViewFormAnalytics } from "@/lib/auth/permissions";
 import EventStats from "@/src/features/Modals/Event/EventStats/EventStats";
 
 export default async function Page({ params }) {
@@ -21,7 +27,7 @@ export default async function Page({ params }) {
   const user = await getCurrentUser();
 
   if (!user) redirect(`/Login?next=/profile/events/Analytics/${eventId}`);
-  if (!isAdmin(user)) redirect("/profile");
+  if (!canViewFormAnalytics(user)) redirect("/profile");
 
   return <EventStats onClosePath="/profile/events" />;
 }

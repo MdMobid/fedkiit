@@ -6,6 +6,7 @@ import AuthContext from "../../../../context/AuthContext";
 
 import { api } from "../../../../services";
 import { ComponentLoading, MicroLoading } from "../../../../microInteraction";
+import { FORM_ANALYTICS_ROLES_CLIENT } from "@/lib/auth/roles";
 import Link from "next/link";
 
 const Events = () => {
@@ -22,16 +23,10 @@ const Events = () => {
   const viewPath = "/Events";
   const analyticsPath = "/profile/events/Analytics";
 
-  const analyticsAccessRoles = [
-    "PRESIDENT",
-    "VICEPRESIDENT",
-    "DIRECTOR_CREATIVE",
-    "DIRECTOR_TECHNICAL",
-    "DIRECTOR_MARKETING",
-    "DIRECTOR_OPERATIONS",
-    "DIRECTOR_SPONSORSHIP",
-    "ADMIN",
-  ];
+  // Shared with the API route and the Analytics page, so the button cannot be
+  // offered to someone the server will turn away — or withheld from someone it
+  // would have served.
+  const analyticsAccessRoles = FORM_ANALYTICS_ROLES_CLIENT;
 
   useEffect(() => {
     const fetchEventsData = async () => {

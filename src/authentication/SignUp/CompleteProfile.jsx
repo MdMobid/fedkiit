@@ -110,10 +110,15 @@ function CompleteProfile() {
             userObject.github,
             userObject.linkedin,
             userObject.designation,
-            userObject.regForm,
-            userObject.access,
-            userObject.editProfileCount,
+            // `access` is the 12th argument, not the 13th. These four were off
+            // by one against the signature, so `regForm` landed in `access` —
+            // leaving every account created here with a role that matches no
+            // entry in any role list, which is how a member could lose a
+            // permission their database record still granted them.
             "USER",
+            userObject.editProfileCount,
+            userObject.regForm,
+            userObject.blurhash || "",
             "someToken",
             SESSION_TTL_MS
           );

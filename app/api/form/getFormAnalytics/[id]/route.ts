@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
 import { expressError, handle, json } from "@/lib/api/express";
 import { getCurrentUser } from "@/lib/auth/access";
-import { can } from "@/lib/auth/permissions";
-import { envList, getEnv } from "@/lib/env";
+import { canViewFormAnalytics } from "@/lib/auth/permissions";
 
 /**
  * GET /api/form/getFormAnalytics/:id
@@ -21,18 +20,10 @@ export async function GET(
     const user = await getCurrentUser();
     if (!user) return expressError(401, "Token is required");
 
-    // Role list lives in `lib/auth/permissions.ts`; the address allowlist that
-    // sits beside it is `FORM_ANALYTICS_ALLOWED_EMAILS` in the environment,
-    // both previously hardcoded here.
-    const allowedEmails = envList(getEnv().FORM_ANALYTICS_ALLOWED_EMAILS).map(
-      (entry) => entry.toLowerCase(),
-    );
-
+    // Role list and address allowlist both live in `lib/auth/permissions.ts`,
+    // shared with the page that renders EventStats so the two cannot disagree.
     // 401 rather than 403, matching `ApiError(status.UNAUTHORIZED, ...)`.
-    if (
-      !can(user, "FORM_ANALYTICS_VIEW") &&
-      !allowedEmails.includes(user.email.toLowerCase())
-    ) {
+    if (!canViewFormAnalytics(user)) {
       return expressError(401, "Access Denied");
     }
 
