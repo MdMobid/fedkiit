@@ -90,6 +90,27 @@ const chatbotService = {
                 message: 'Failed to send email. Please try again.'
             };
         }
+    },
+
+    /**
+     * Fetch dynamic event-centric chatbot question flows and category actions
+     * @returns {Promise<Object>} Flow data object
+     */
+    getFlows: async () => {
+        try {
+            const response = await api.get('/api/chatbot/flow');
+            return response.data;
+        } catch (error) {
+            console.error('[Chatbot Service] Error fetching flows:', error);
+            const chatbotName = process.env.NEXT_PUBLIC_CHATBOT_NAME || 'FEDI';
+            return {
+                success: false,
+                chatbotName,
+                categories: [],
+                featuredPrompts: [],
+                teaserMessage: `Explore FED & its Events! Ask ${chatbotName}`
+            };
+        }
     }
 };
 

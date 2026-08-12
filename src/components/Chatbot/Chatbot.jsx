@@ -3,17 +3,15 @@
 /**
  * @fileoverview FED Chatbot Component
  * @module components/Chatbot
- * @description AI-powered chatbot for FED KIIT website with seamless navigation
+ * @description AI-powered chatbot for FED KIIT website with dynamic flows, glassmorphic teaser, and background navigation.
  */
 
 import { useState, useRef, useEffect, useContext } from 'react';
-
 import ReactMarkdown from 'react-markdown';
 import DOMPurify from 'dompurify';
 import styles from './Chatbot.module.scss';
-import { IoCloseOutline, IoSend, IoMic, IoMicOff } from 'react-icons/io5';
+import { IoCloseOutline, IoSend, IoMic, IoMicOff, IoRefreshOutline, IoSparkles } from 'react-icons/io5';
 import { BiSolidMessageSquareDetail } from 'react-icons/bi';
-import { IoSparkles } from 'react-icons/io5';
 import { FiLogIn } from 'react-icons/fi';
 import { chatbotService } from '../../services/chatbot';
 import AuthContext from '../../context/AuthContext';
@@ -21,7 +19,7 @@ import FedLogo from '../../assets/images/FedLogo.png';
 import { useRouter, usePathname } from "next/navigation";
 
 const Chatbot = () => {
-    const chatbotName = process.env.NEXT_PUBLIC_CHATBOT_NAME || 'AskFED';
+    const [chatbotName, setChatbotName] = useState(process.env.NEXT_PUBLIC_CHATBOT_NAME || 'AskFED');
     const router = useRouter();
     const location = { pathname: usePathname() };
     const authCtx = useContext(AuthContext);
@@ -32,9 +30,9 @@ const Chatbot = () => {
     // Generate personalized greeting message
     const getGreetingMessage = () => {
         if (userName) {
-            return `Hi **${userName}**! I'm **${chatbotName}**, your personal assistant for FED KIIT. 🚀 I'm here to help you with anything related to FED!`;
+            return `Hi **${userName}**! I'm **${chatbotName}**, your event-focused assistant for FED KIIT. 🚀 How can I help you today?`;
         }
-        return `Hello! I'm **${chatbotName}**, your personal assistant for FED KIIT. 🚀 I'm here to help you with anything related to FED!`;
+        return `Hello! I'm **${chatbotName}**, your event-focused assistant for FED KIIT. 🚀 How can I help you today?`;
     };
 
     const [messages, setMessages] = useState([
@@ -50,13 +48,44 @@ const Chatbot = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-    const [conversationHistory, setConversationHistory] = useState([]); // Track conversation for context
-    const [isWaitingForEmailContent, setIsWaitingForEmailContent] = useState(false); // Email flow state
-    const messagesEndRef = useRef(null);
+    const [isWaitingForEmailContent, setIsWaitingForEmailContent] = useState(false);
+    const [isAwaitingEmailConfirmation, setIsAwaitingEmailConfirmation] = useState(false);
+
+    // Engagement & Flow Management States
+    const [featuredPrompts, setFeaturedPrompts] = useState([]);
+    const [teaserMessage, setTeaserMessage] = useState(`Explore FED & its Events! Ask ${process.env.NEXT_PUBLIC_CHATBOT_NAME || 'FEDI'}`);
+    const [showTeaser, setShowTeaser] = useState(true);
+
     const chatboxRef = useRef(null);
+    const messagesEndRef = useRef(null);
+    const lastMessageRef = useRef(null);
     const recognitionRef = useRef(null);
 
-    // Update greeting when user logs in/out
+    // Fetch dynamic flows & chatbot config on load
+    useEffect(() => {
+        const fetchFlows = async () => {
+            try {
+                const data = await chatbotService.getFlows();
+                if (data && data.success) {
+                    if (data.chatbotName) {
+                        setChatbotName(data.chatbotName);
+                    }
+                    if (Array.isArray(data.featuredPrompts) && data.featuredPrompts.length > 0) {
+                        setFeaturedPrompts(data.featuredPrompts.filter(p => p.isActive));
+                    }
+                    if (data.teaserMessage) {
+                        setTeaserMessage(data.teaserMessage);
+                    }
+                }
+            } catch (err) {
+                console.error('[Chatbot UI] Error loading flows:', err);
+            }
+        };
+
+        fetchFlows();
+    }, []);
+
+    // Update greeting when user logs in/out or chatbotName changes
     useEffect(() => {
         setMessages(prev => {
             if (prev.length === 1 && !prev[0].isUser) {
@@ -67,83 +96,159 @@ const Chatbot = () => {
             }
             return prev;
         });
-    }, [authCtx.isLoggedIn, userName]);
+    }, [authCtx.isLoggedIn, userName, chatbotName]);
 
-    // Suggested prompts
-    const suggestedPrompts = [
-        "What is FED?",
-        "Who is the President of FED?",
-        "Show me the Upcoming Events",
-        "Show me FED Insights"
-    ];
-
-    // Navigation patterns - FIXED: /Blog not /Blogs
+    // Navigation patterns - Mapping AI navigation hints to valid router paths
     const NAVIGATION_PATTERNS = {
         '[NAV:/Team]': '/Team',
         '[NAV:/Events]': '/Events',
         '[NAV:/Blog]': '/Blog',
-        '[NAV:/Blogs]': '/Blog', // Handle both for backwards compatibility
-        '[NAV:/pastEvents]': '/pastEvents',
-        '[NAV:/alumni]': '/Alumni',
+        '[NAV:/Blogs]': '/Blog',
+        '[NAV:/Events/pastEvents]': '/Events/pastEvents',
+        '[NAV:/Alumni]': '/Alumni',
+        '[NAV:/#Contact]': '/#Contact',
+        '[NAV:/Contact]': '/#Contact',
+        '[NAV:/profile/certificates]': '/profile/certificates',
+        '[NAV:/verify/certificate]': '/verify/certificate',
     };
 
-    // Auto-scroll to bottom
-    const scrollToBottom = () => {
-        if (chatboxRef.current) {
-            chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+    // Smart Scroll: User messages & typing indicator scroll to bottom; bot responses scroll to top of new message
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const lastMsg = messages[messages.length - 1];
+
+        if (isTyping) {
+            // When bot is typing, scroll to bottom so typing dots are visible
+            if (chatboxRef.current) {
+                chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+            }
+        } else if (lastMsg) {
+            if (lastMsg.isUser) {
+                // User sent a message -> scroll to bottom
+                if (chatboxRef.current) {
+                    chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+                }
+            } else if (lastMsg.id !== 1 && lastMessageRef.current && chatboxRef.current) {
+                // Bot responded -> scroll to TOP of the new bot message so user can read from beginning!
+                setTimeout(() => {
+                    if (lastMessageRef.current && chatboxRef.current) {
+                        const containerTop = chatboxRef.current.getBoundingClientRect().top;
+                        const messageTop = lastMessageRef.current.getBoundingClientRect().top;
+                        const offset = messageTop - containerTop + chatboxRef.current.scrollTop - 10;
+
+                        chatboxRef.current.scrollTo({
+                            top: Math.max(0, offset),
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 50);
+            }
+        }
+    }, [messages, isTyping, isOpen]);
+
+    // Toggle chatbot window
+    const toggleChatbot = () => {
+        setIsOpen(!isOpen);
+        if (!isOpen) {
+            setShowTeaser(false);
         }
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, isTyping, isOpen]); // Added isOpen to scroll to bottom when chatbot opens
-
-    // Toggle chatbot
-    const toggleChatbot = () => {
-        setIsOpen(!isOpen);
+    // Reset conversation
+    const handleResetChat = () => {
+        setMessages([
+            {
+                id: 1,
+                text: getGreetingMessage(),
+                isUser: false,
+                timestamp: new Date(),
+            }
+        ]);
+        setIsWaitingForEmailContent(false);
+        setIsAwaitingEmailConfirmation(false);
+        setShowAuthPrompt(false);
     };
 
     /**
-     * Process navigation hints from AI response
-     * Navigates the page seamlessly without closing chatbot
+     * Process navigation hints & route intents from AI response
+     * Automatically redirects the user to the target page in the background
      */
     const processNavigation = (responseText) => {
         let cleanedText = responseText;
         let navigationPath = null;
 
-        // Check for navigation patterns
-        for (const [pattern, path] of Object.entries(NAVIGATION_PATTERNS)) {
-            if (responseText.includes(pattern)) {
-                cleanedText = responseText.replace(pattern, '').trim();
-                navigationPath = path;
-                break;
+        // 1. Check explicit [NAV:/path] tags from model
+        const navMatch = responseText.match(/\[NAV:(\/[^\]]+)\]/i);
+        if (navMatch) {
+            let target = navMatch[1].trim();
+            cleanedText = responseText.replace(/\[NAV:(\/[^\]]+)\]/gi, '').trim();
+
+            if (target === '/events') target = '/Events';
+            if (target === '/events/past' || target === '/pastEvents') target = '/Events/pastEvents';
+            if (target === '/team') target = '/Team';
+            if (target === '/blog' || target === '/blogs') target = '/Blog';
+            if (target === '/alumni') target = '/Alumni';
+            if (target.toLowerCase() === '/#contact' || target.toLowerCase() === '/contact') target = '/#Contact';
+            if (target.toLowerCase() === '/profile/certificates' || target.toLowerCase() === '/certificates') target = '/profile/certificates';
+
+            navigationPath = target;
+        } else {
+            // 2. Auto-detect page route intents from response content if tag absent
+            if (/\b(past events|past event|previous events)\b/i.test(responseText) || responseText.includes('/Events/pastEvents') || responseText.includes('/events/past')) {
+                navigationPath = '/Events/pastEvents';
+            } else if (/\b(upcoming events|events list|explore events)\b/i.test(responseText) || responseText.includes('/Events') || responseText.includes('/events')) {
+                navigationPath = '/Events';
+            } else if (/\b(our team|executive team|members|team members)\b/i.test(responseText) || responseText.includes('/Team') || responseText.includes('/team')) {
+                navigationPath = '/Team';
+            } else if (/\b(blogs|blog posts|articles|read blogs)\b/i.test(responseText) || responseText.includes('/Blog') || responseText.includes('/blog')) {
+                navigationPath = '/Blog';
+            } else if (/\b(alumni|alumnus)\b/i.test(responseText) || responseText.includes('/Alumni') || responseText.includes('/alumni')) {
+                navigationPath = '/Alumni';
+            } else if (/\b(certificate|certificates|my certificate|download certificate)\b/i.test(responseText) || responseText.includes('/profile/certificates')) {
+                navigationPath = '/profile/certificates';
+            } else if (/\b(contact us|contact team|reach out|contact form|send message)\b/i.test(responseText) || responseText.includes('/#Contact') || responseText.includes('/#contact')) {
+                navigationPath = '/#Contact';
             }
         }
 
-        // Perform navigation if path found and not already on that page
-        if (navigationPath && location.pathname !== navigationPath) {
+        // Automatically redirect page if target found and user is not already on that path
+        if (navigationPath && typeof window !== 'undefined' && location?.pathname !== navigationPath) {
             setTimeout(() => {
                 router.push(navigationPath);
             }, 500);
         }
 
-        return cleanedText;
+        return { cleanedText, navigationPath };
     };
 
-    // Handle login button click - FIXED: Minimize chatbot when clicking sign in
-    const handleLoginClick = () => {
-        sessionStorage.setItem('prevPage', window.location.pathname);
-        setIsOpen(false); // Minimize chatbot
-        router.push('/login');
+    // Handle login button click with target return destination
+    const handleLoginClick = (targetPath = null) => {
+        if (typeof window !== 'undefined') {
+            const dest = (typeof targetPath === 'string' && targetPath.startsWith('/'))
+                ? targetPath
+                : window.location.pathname;
+            sessionStorage.setItem('prevPage', dest);
+            setIsOpen(false);
+            router.push(`/Login?next=${encodeURIComponent(dest)}`);
+        } else {
+            setIsOpen(false);
+            router.push('/Login');
+        }
     };
 
     // Build conversation history for context
     const buildConversationHistory = () => {
-        // Get last 6 messages (3 exchanges) for context
-        const recentMessages = messages.slice(-6);
-        return recentMessages.map(msg => ({
+        // Exclude initial greeting and auth prompt cards
+        const userAndModelTurns = messages.filter(msg => msg.id !== 1 && !msg.isAuthPrompt);
+        // Find first user message index to ensure history begins with 'user'
+        const firstUserIdx = userAndModelTurns.findIndex(m => m.isUser);
+        if (firstUserIdx === -1) return [];
+
+        const validHistory = userAndModelTurns.slice(firstUserIdx).slice(-6);
+        return validHistory.map(msg => ({
             role: msg.isUser ? 'user' : 'model',
-            content: msg.text
+            text: msg.text
         }));
     };
 
@@ -152,10 +257,11 @@ const Chatbot = () => {
         const textToSend = messageText || userInput;
         if (!textToSend?.trim()) return;
 
-        // Add user message
+        const displayText = messageText || userInput;
+
         const userMessage = {
             id: messages.length + 1,
-            text: textToSend,
+            text: displayText,
             isUser: true,
             timestamp: new Date(),
         };
@@ -166,11 +272,9 @@ const Chatbot = () => {
         setShowAuthPrompt(false);
 
         try {
-            // Check if we're waiting for email content
             if (isWaitingForEmailContent) {
-                // Send the email with user's content UNCHANGED
                 const emailResult = await chatbotService.sendEmail(
-                    textToSend,  // Send exactly what user typed - no modifications
+                    textToSend,
                     userName || 'Anonymous',
                     authCtx.user?.email
                 );
@@ -180,7 +284,7 @@ const Chatbot = () => {
                 const emailResponse = {
                     id: messages.length + 2,
                     text: emailResult.success
-                        ? '✅ Your message has been sent to FED! The team will get back to you soon. 📧'
+                        ? '✅ Your message has been sent to FED! The event team will get back to you soon. 📧'
                         : '❌ Sorry, there was an error sending your email. Please try again later.',
                     isUser: false,
                     timestamp: new Date(),
@@ -190,8 +294,37 @@ const Chatbot = () => {
                 return;
             }
 
-            // Check if user wants to send an email
-            const emailIntentKeywords = ['send email', 'send mail', 'email fed', 'contact fed', 'message fed', 'reach out', 'send a message'];
+            if (isAwaitingEmailConfirmation) {
+                setIsAwaitingEmailConfirmation(false);
+                const lowerText = textToSend.toLowerCase();
+                const isYes = /\b(yes|yeah|yep|sure|ok|okay|send|id like to|y)\b/i.test(lowerText) || lowerText.includes('yes') || lowerText.includes('sure');
+                const isNo = /\b(no|nope|nah|not now|no thanks|n)\b/i.test(lowerText) || lowerText.includes('no');
+
+                if (isYes) {
+                    setIsWaitingForEmailContent(true);
+                    const promptMessage = {
+                        id: messages.length + 2,
+                        text: '📧 Sure! Please type your message in the next chat. I will send it directly to the event team at fedkiit@gmail.com.',
+                        isUser: false,
+                        timestamp: new Date(),
+                    };
+                    setMessages(prev => [...prev, promptMessage]);
+                    setIsTyping(false);
+                    return;
+                } else if (isNo) {
+                    const noMessage = {
+                        id: messages.length + 2,
+                        text: 'No problem! You are redirected to our contact form on the page.',
+                        isUser: false,
+                        timestamp: new Date(),
+                    };
+                    setMessages(prev => [...prev, noMessage]);
+                    setIsTyping(false);
+                    return;
+                }
+            }
+
+            const emailIntentKeywords = ['send email', 'send mail', 'email fed', 'send an email', 'write an email', 'email team'];
             const lowerText = textToSend.toLowerCase();
             const wantsToSendEmail = emailIntentKeywords.some(keyword => lowerText.includes(keyword));
 
@@ -199,7 +332,7 @@ const Chatbot = () => {
                 setIsWaitingForEmailContent(true);
                 const promptMessage = {
                     id: messages.length + 2,
-                    text: '📧 Sure! Please type your message in the next chat. I will send it exactly as you write it to fedkiit@gmail.com.\n\n**Note:** Your message will be sent exactly as you type it - no changes will be made.',
+                    text: '📧 Sure! Please type your message in the next chat. I will send it directly to the event team at fedkiit@gmail.com.',
                     isUser: false,
                     timestamp: new Date(),
                 };
@@ -208,45 +341,41 @@ const Chatbot = () => {
                 return;
             }
 
-            // Normal chatbot flow - Build conversation history for context
             const history = buildConversationHistory();
-
-            // Call backend chatbot API with conversation history
             const response = await chatbotService.sendMessage(textToSend, history);
 
-            // Handle auth required response
             if (response.requiresAuth) {
                 setShowAuthPrompt(true);
                 const authMessage = {
                     id: messages.length + 2,
-                    text: response.message || '🔐 Please sign in to access this feature.',
+                    text: response.message || '🔐 Please sign in to access event details or certificate downloads.',
                     isUser: false,
                     timestamp: new Date(),
                     isAuthPrompt: true
                 };
                 setMessages(prev => [...prev, authMessage]);
             } else {
-                // Get the raw response
                 let rawResponse = response.success ? response.response : 'Sorry, I encountered an error. Please try again.';
 
-                // Check for EMAIL_TRIGGER tag in AI response
                 const emailTriggerPattern = /\[EMAIL_TRIGGER\]/gi;
-                const hasEmailTrigger = emailTriggerPattern.test(rawResponse);
-
-                if (hasEmailTrigger) {
-                    // Remove the trigger tag from displayed message
+                if (emailTriggerPattern.test(rawResponse)) {
                     rawResponse = rawResponse.replace(/\[EMAIL_TRIGGER\]/gi, '').trim();
-                    // Set email mode - next user message goes directly to email
                     setIsWaitingForEmailContent(true);
-                    console.log('[Chatbot] Email trigger detected - next message will be sent as email');
                 }
 
-                // Process navigation hints and clean the response
-                const cleanedResponse = processNavigation(rawResponse);
+                let { cleanedText, navigationPath } = processNavigation(rawResponse);
+
+                let finalBotText = cleanedText;
+                if (navigationPath === '/#Contact') {
+                    setIsAwaitingEmailConfirmation(true);
+                    finalBotText = finalBotText
+                        ? `${finalBotText}\n\nWould you like to send email to FED?`
+                        : `Would you like to send email to FED?`;
+                }
 
                 const botResponse = {
                     id: messages.length + 2,
-                    text: cleanedResponse,
+                    text: finalBotText,
                     isUser: false,
                     timestamp: new Date(),
                 };
@@ -254,10 +383,10 @@ const Chatbot = () => {
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            setIsWaitingForEmailContent(false); // Reset email state on error
+            setIsWaitingForEmailContent(false);
             const errorResponse = {
                 id: messages.length + 2,
-                text: 'Sorry, I\'m having trouble connecting. Please try again later.',
+                text: 'Sorry, I encountered an error. Please try again.',
                 isUser: false,
                 timestamp: new Date(),
             };
@@ -267,112 +396,171 @@ const Chatbot = () => {
         }
     };
 
-    // Handle Enter key
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    };
+    // Voice Input Handler (Requests native browser microphone permission popup)
+    const toggleVoiceInput = async () => {
+        if (typeof window === 'undefined') return;
 
-    // Voice recognition
-    const startVoiceRecognition = () => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert('Voice recognition is not supported in your browser. Please use Chrome or Edge.');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
             return;
         }
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            setIsListening(true);
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            setUserInput(transcript);
-        };
-
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            setIsListening(false);
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-        recognition.start();
-    };
-
-    const stopVoiceRecognition = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-        }
-    };
-
-    const toggleVoiceRecognition = () => {
         if (isListening) {
-            stopVoiceRecognition();
+            recognitionRef.current?.stop();
+            setIsListening(false);
         } else {
-            startVoiceRecognition();
+            // Explicitly trigger the native browser permission dialog popup ([Allow] [Block])
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Release temporary stream so SpeechRecognition can access the microphone cleanly
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            } catch (err) {
+                console.warn('[Microphone Permission Denied]', err);
+                alert('Microphone access is required to use voice input. Please click Allow when prompted by your browser.');
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognitionRef.current = recognition;
+
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                setIsListening(true);
+            };
+
+            recognition.onresult = (event) => {
+                let liveTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const text = event.results[i][0].transcript;
+                    liveTranscript += text;
+                }
+                if (liveTranscript) {
+                    setUserInput(liveTranscript);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                setIsListening(false);
+                if (event.error === 'not-allowed') {
+                    alert('Microphone access was denied. Please enable microphone permissions in your browser address bar to use voice input.');
+                } else if (event.error !== 'no-speech') {
+                    console.warn('[Speech Recognition Info]', event.error);
+                }
+            };
+
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+
+            try {
+                recognition.start();
+            } catch (err) {
+                console.error('[Speech Start Error]', err);
+                setIsListening(false);
+            }
         }
     };
 
-    // Clean and sanitize message text - remove broken HTML from AI
+    // Clean message text by processing Markdown links & mailto tags
     const cleanMessage = (text) => {
-        // Remove any broken HTML the AI might have generated
-        let cleanText = text
-            // Remove HTML anchor tags completely
-            .replace(/<a\s[^>]*>/gi, '')
+        if (!text) return '';
+
+        const cleanText = text
+            .replace(/<a\s+href="[^"]*"\s*>([^<]*)<\/a>/gi, '$1')
+            .replace(/<a\s+href='[^']*'\s*>([^<]*)<\/a>/gi, '$1')
+            .replace(/<a>([^<]*)<\/a>/gi, '$1')
             .replace(/<\/a>/gi, '')
-            // Remove broken HTML attribute fragments
             .replace(/"\s*target="_blank"\s*rel="noopener\s*noreferrer"\s*style="[^"]*">/gi, '')
             .replace(/"\s*target="_blank"\s*rel="noopener\s*noreferrer">/gi, '')
             .replace(/"\s*target="_blank">/gi, '')
             .replace(/style="[^"]*">/gi, '')
             .replace(/rel="[^"]*">/gi, '')
             .replace(/"\s*>/g, '')
-            // Remove AI-generated mailto markdown links: [email](mailto:email) -> just email
             .replace(/\[([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\]\(mailto:[^)]+\)/gi, '$1')
-            // Remove AI-generated Gmail compose links: [email](https://mail.google.com/...) -> just email
             .replace(/\[([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\]\(https:\/\/mail\.google\.com[^)]+\)/gi, '$1')
-            // Convert standalone @fedkiit to Instagram link (NOT inside URLs like medium.com/@fedkiit)
             .replace(/(?<!\/)@fedkiit(?!\/)/gi, '[@fedkiit](https://www.instagram.com/fedkiit/)')
-            // Convert plain email addresses to Gmail compose links
             .replace(/(?<!\[)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?!\])/g, '[$1](https://mail.google.com/mail/?view=cm&to=$1)');
 
-        return DOMPurify.sanitize(cleanText);
+        if (typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function') {
+            return DOMPurify.sanitize(cleanText);
+        }
+        return cleanText;
     };
 
-    // Custom link component for react-markdown
+    /**
+     * Active Link Renderer Component
+     * Handles both internal App Router navigation and external hyperlinks cleanly
+     */
     const LinkRenderer = ({ href, children }) => {
+        let normalizedHref = href || '';
+        if (normalizedHref === '/events') normalizedHref = '/Events';
+        if (normalizedHref === '/events/past' || normalizedHref === '/events/pastEvents') normalizedHref = '/Events/pastEvents';
+        if (normalizedHref === '/team') normalizedHref = '/Team';
+        if (normalizedHref === '/blog' || normalizedHref === '/blogs') normalizedHref = '/Blog';
+        if (normalizedHref === '/alumni') normalizedHref = '/Alumni';
+        if (normalizedHref === '/certificates' || normalizedHref === '/profile/certificates') normalizedHref = '/profile/certificates';
+
+        const isInternal = normalizedHref.startsWith('/') || normalizedHref.startsWith('#');
+
+        const handleClick = (e) => {
+            if (isInternal) {
+                e.preventDefault();
+                if (normalizedHref.startsWith('#')) {
+                    const hashTarget = normalizedHref.replace('/', '');
+                    const el = document.querySelector(hashTarget) || document.querySelector('#contact');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                    } else if (location.pathname !== '/') {
+                        router.push(normalizedHref);
+                    }
+                } else {
+                    router.push(normalizedHref);
+                }
+            }
+        };
+
+        if (isInternal) {
+            return (
+                <a href={normalizedHref} onClick={handleClick} className={styles.chatLink}>
+                    {children}
+                </a>
+            );
+        }
+
         return (
-            <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                    color: '#ffffff',
-                    textDecoration: 'underline',
-                    fontWeight: 600
-                }}
-            >
+            <a href={href} target="_blank" rel="noopener noreferrer" className={styles.chatLink}>
                 {children}
             </a>
         );
     };
 
     return (
-        <>
-            {/* Toggle Button */}
+        <div className={styles.chatbotWrapper}>
+            {/* Glassmorphic Teaser Bubble */}
+            {!isOpen && showTeaser && (
+                <div className={styles.teaserBubble} onClick={toggleChatbot}>
+                    <span>{teaserMessage}</span>
+                    <button
+                        className={styles.teaserClose}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowTeaser(false);
+                        }}
+                        aria-label="Close Teaser"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {/* Toggle Floating Action Button */}
             {!isOpen && (
                 <button
                     className={styles.chatbotToggle}
@@ -389,41 +577,48 @@ const Chatbot = () => {
                 <div className={styles.backdrop} onClick={toggleChatbot}></div>
             )}
 
-            {/* Chatbot Container */}
+            {/* Chatbot Window */}
             {isOpen && (
                 <div className={styles.chatbotContainer}>
-                    {/* Header - FIXED: Removed username from here */}
+                    {/* Header */}
                     <header className={styles.chatbotHeader}>
                         <div className={styles.headerContent}>
                             <div className={styles.avatarContainer}>
-                                <img
-                                    src={FedLogo.src}
-                                    alt="FED Logo"
-                                    className={styles.avatar}
-                                />
+                                <img src={FedLogo.src} alt="FED Logo" className={styles.avatar} />
                                 <div className={styles.statusIndicator}></div>
                             </div>
                             <div className={styles.headerText}>
                                 <h2 className={styles.title}>{chatbotName}</h2>
                                 <p className={styles.subtitle}>
-                                    <IoSparkles size={12} /> AI Assistant
+                                    <IoSparkles size={12} /> Event Assistant
                                 </p>
                             </div>
                         </div>
-                        <button
-                            className={styles.closeButton}
-                            onClick={toggleChatbot}
-                            aria-label="Close Chat"
-                        >
-                            <IoCloseOutline size={26} />
-                        </button>
+                        <div className={styles.headerActions}>
+                            <button
+                                className={styles.iconHeaderBtn}
+                                onClick={handleResetChat}
+                                title="Reset Conversation"
+                                aria-label="Reset Conversation"
+                            >
+                                <IoRefreshOutline size={20} />
+                            </button>
+                            <button
+                                className={styles.closeButton}
+                                onClick={toggleChatbot}
+                                aria-label="Close Chat"
+                            >
+                                <IoCloseOutline size={26} />
+                            </button>
+                        </div>
                     </header>
 
-                    {/* Messages Area */}
-                    <div className={styles.messagesArea} ref={chatboxRef}>
-                        {messages.map((message) => (
+                    {/* Messages Body */}
+                    <div className={styles.chatbotMessages} ref={chatboxRef}>
+                        {messages.map((message, idx) => (
                             <div
                                 key={message.id}
+                                ref={idx === messages.length - 1 ? lastMessageRef : null}
                                 className={`${styles.messageWrapper} ${message.isUser ? styles.userWrapper : styles.botWrapper}`}
                             >
                                 {!message.isUser && (
@@ -443,14 +638,10 @@ const Chatbot = () => {
                                         >
                                             {cleanMessage(message.text)}
                                         </ReactMarkdown>
-                                        {/* Show login button for auth prompts */}
+
                                         {message.isAuthPrompt && !authCtx.isLoggedIn && (
-                                            <button
-                                                className={styles.loginButton}
-                                                onClick={handleLoginClick}
-                                            >
-                                                <FiLogIn size={16} />
-                                                Sign In
+                                            <button className={styles.loginButton} onClick={() => handleLoginClick(message.targetPath)}>
+                                                <FiLogIn size={16} /> Sign In
                                             </button>
                                         )}
                                     </div>
@@ -472,57 +663,67 @@ const Chatbot = () => {
                             </div>
                         )}
 
-                        {/* Show suggested prompts only for first message */}
-                        {messages.length === 1 && !isTyping && (
-                            <div className={styles.suggestedPrompts}>
-                                <p className={styles.promptsLabel}>Quick actions:</p>
-                                <div className={styles.promptsGrid}>
-                                    {suggestedPrompts.map((prompt, index) => (
-                                        <button
-                                            key={index}
-                                            className={styles.promptButton}
-                                            onClick={() => sendMessage(prompt)}
-                                        >
-                                            {prompt}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input Area */}
-                    <div className={styles.inputArea}>
-                        <input
-                            type="text"
-                            value={userInput}
-                            onChange={(e) => setUserInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={authCtx.isLoggedIn ? "Ask about your events, certificates..." : "Ask me anything about FED..."}
-                            className={styles.messageInput}
-                        />
-                        <button
-                            className={`${styles.voiceButton} ${isListening ? styles.listening : ''}`}
-                            onClick={toggleVoiceRecognition}
-                            aria-label={isListening ? "Stop Recording" : "Start Voice Input"}
-                            type="button"
+                    {/* Footer Input Area */}
+                    <div className={styles.chatbotFooter}>
+                        {/* Compact Horizontal Prompts Rail */}
+                        {featuredPrompts.length > 0 && (
+                            <div className={styles.compactPromptsRail}>
+                                {featuredPrompts.map((prompt) => (
+                                    <button
+                                        key={prompt.id}
+                                        className={styles.compactPromptPill}
+                                        onClick={() => sendMessage(prompt.query)}
+                                    >
+                                        {prompt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                sendMessage();
+                            }}
+                            className={styles.inputForm}
                         >
-                            {isListening ? <IoMicOff size={20} /> : <IoMic size={20} />}
-                        </button>
-                        <button
-                            className={styles.sendButton}
-                            onClick={() => sendMessage()}
-                            disabled={!userInput.trim()}
-                            aria-label="Send Message"
-                        >
-                            <IoSend size={20} />
-                        </button>
+                            <input
+                                type="text"
+                                value={userInput}
+                                onChange={(e) => setUserInput(e.target.value)}
+                                placeholder={
+                                    isWaitingForEmailContent
+                                        ? "Type message to email FED..."
+                                        : "Ask about FED events, certificates..."
+                                }
+                                className={styles.inputField}
+                                disabled={isTyping}
+                            />
+                            <button
+                                type="button"
+                                onClick={toggleVoiceInput}
+                                className={`${styles.micButton} ${isListening ? styles.listening : ''}`}
+                                title={isListening ? "Stop listening" : "Start voice input"}
+                                aria-label={isListening ? "Stop listening" : "Start voice input"}
+                            >
+                                {isListening ? <IoMicOff size={20} /> : <IoMic size={20} />}
+                            </button>
+                            <button
+                                type="submit"
+                                className={styles.sendButton}
+                                disabled={!userInput.trim() || isTyping}
+                                aria-label="Send Message"
+                            >
+                                <IoSend size={18} />
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };
 
