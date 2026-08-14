@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/site";
 import { SITE_URL } from "@/lib/seo/metadata";
 import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
+import ChatWidget from "@/components/chatbot/ChatWidget";
 
 import "./globals.scss";
 
@@ -80,7 +81,10 @@ export default function RootLayout({
       </head>
       <body>
         <JsonLd schema={[organizationSchema(), websiteSchema()]} />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <ChatWidget />
+        </Providers>
 
         {/* Razorpay checkout, loaded in index.html on the original site. */}
         <Script
