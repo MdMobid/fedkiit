@@ -44,9 +44,8 @@ export default function MainLayout({ children }) {
     <div>
       <Navbar />
       <div
-        className={`page ${isOmegaPage ? "omega-page" : ""} ${
-          isFullBleed ? "" : "page--nav-offset"
-        }`}
+        className={`page ${isOmegaPage ? "omega-page" : ""} ${isFullBleed ? "" : "page--nav-offset"
+          }`}
       >
         {children}
       </div>

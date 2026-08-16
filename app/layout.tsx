@@ -112,13 +112,15 @@ export default function RootLayout({
         {/* Google Analytics, same measurement id as the original. */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-027MLWYPTL"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="ga-init" strategy="afterInteractive">
-          {`window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-027MLWYPTL');`}
+        <Script id="google-analytics" strategy="lazyOnload">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-027MLWYPTL');
+          `}
         </Script>
       </body>
     </html>

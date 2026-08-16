@@ -16,7 +16,15 @@ import { FiLogIn } from 'react-icons/fi';
 import { chatbotService } from '../../services/chatbot';
 import AuthContext from '../../context/AuthContext';
 import FedLogo from '../../assets/images/FedLogo.png';
+import Lottie from 'lottie-react';
+import foxAnimation from '@/public/lottie/fox_head_tilt.json';
 import { useRouter, usePathname } from "next/navigation";
+
+const MascotFoxAvatar = ({ size = 36 }) => (
+    <div style={{ width: size, height: size, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Lottie animationData={foxAnimation} loop={true} style={{ width: '100%', height: '100%' }} />
+    </div>
+);
 
 const Chatbot = () => {
     const [chatbotName, setChatbotName] = useState(process.env.NEXT_PUBLIC_CHATBOT_NAME || 'AskFED');
@@ -567,7 +575,7 @@ const Chatbot = () => {
                     onClick={toggleChatbot}
                     aria-label="Open Chat"
                 >
-                    <BiSolidMessageSquareDetail size={38} />
+                    <MascotFoxAvatar size={48} />
                     <div className={styles.pulseRing}></div>
                 </button>
             )}
@@ -584,7 +592,7 @@ const Chatbot = () => {
                     <header className={styles.chatbotHeader}>
                         <div className={styles.headerContent}>
                             <div className={styles.avatarContainer}>
-                                <img src={FedLogo.src} alt="FED Logo" className={styles.avatar} />
+                                <MascotFoxAvatar size={38} />
                                 <div className={styles.statusIndicator}></div>
                             </div>
                             <div className={styles.headerText}>
@@ -623,7 +631,7 @@ const Chatbot = () => {
                             >
                                 {!message.isUser && (
                                     <div className={styles.messageAvatar}>
-                                        <img src={FedLogo.src} alt="Bot" />
+                                        <MascotFoxAvatar size={28} />
                                     </div>
                                 )}
                                 <div className={styles.messageContent}>
@@ -653,7 +661,7 @@ const Chatbot = () => {
                         {isTyping && (
                             <div className={`${styles.messageWrapper} ${styles.botWrapper}`}>
                                 <div className={styles.messageAvatar}>
-                                    <img src={FedLogo.src} alt="Bot" />
+                                    <MascotFoxAvatar size={28} />
                                 </div>
                                 <div className={styles.typingIndicator}>
                                     <span></span>
