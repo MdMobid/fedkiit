@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
 import Providers from "@/src/context/Providers";
+import Chatbot from "@/src/components/Chatbot/Chatbot";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/site";
 import { SITE_URL } from "@/lib/seo/metadata";
@@ -9,6 +10,9 @@ import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
 import ChatWidget from "@/components/chatbot/ChatWidget";
 
 import "./globals.scss";
+// Design tokens and `fed-*` component classes for the revamped Navbar and Home
+// sections. Loaded after globals.scss so its :root tokens win.
+import "./globals.css";
 
 /**
  * Root layout.
@@ -43,7 +47,11 @@ export const metadata: Metadata = {
     title: "FED KIIT",
     description: SITE.description,
   },
-  icons: { icon: "/favicon.ico" },
+  // No `icons` entry on purpose. Setting one overrides Next's file convention
+  // wholesale, and this used to pin the icon to /favicon.ico — which was still
+  // the Vercel triangle that `create-next-app` ships, so the scaffolding icon
+  // was being served in place of the FED logo. Leaving it out lets app/
+  // favicon.ico, icon.png and apple-icon.png all get advertised.
   other: {
     "facebook-domain-verification": "j4kyebnva8sowmo539jn3julvtgvqq",
   },
@@ -60,7 +68,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    // `data-scroll-behavior="smooth"` acknowledges the `scroll-behavior: smooth`
+    // that globals.scss sets on <html>. Without it Next warns, because it has to
+    // decide whether a route change should animate the scroll to the top — with
+    // the attribute present it keeps the smooth scroll the original had.
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/*
           The exact font families and weights the original SCSS pulled in.
@@ -84,6 +96,15 @@ export default function RootLayout({
         <Providers>
           {children}
           <ChatWidget />
+          {/*
+            App.jsx renders <Chatbot /> above <Routes>, so it is present on
+            every route — the auth screens included. Mounting it in the (main)
+            layout instead hid it on /Login, /SignUp, /otp, /ForgotPassword and
+            /completeProfile. It sits inside Providers because it reads
+            AuthContext to attach the signed-in user to a conversation.
+          */}
+          <Chatbot />
+          {children}
         </Providers>
 
         {/* Razorpay checkout, loaded in index.html on the original site. */}

@@ -6,12 +6,12 @@ import styles from "./style/Signup.module.scss";
 
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import AuthContext from "../../context/AuthContext";
+import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import google from "../../assets/images/google.png";
-import users from "../../data/user.json";
 import { Alert, MicroLoading } from "../../microInteraction";
 import { api } from "../../services";
 import { useRouter } from "next/navigation";
+import postAuthRedirect from "../../utils/postAuthRedirect";
 
 export default function GoogleSignup({ setAlert }) {
   // const [alert, setAlert] = useState(null);
@@ -35,9 +35,10 @@ export default function GoogleSignup({ setAlert }) {
 
 
 
+  // `replace`, not `push`: App.jsx redirected with <Navigate replace />.
   useEffect(() => {
     if (shouldNavigate) {
-      router.push(navigatePath);
+      router.replace(navigatePath);
       setShouldNavigate(false); // Reset state after navigation
     }
   }, [shouldNavigate, navigatePath, router]);
@@ -64,8 +65,10 @@ export default function GoogleSignup({ setAlert }) {
             position: "bottom-right",
             duration: 3000,
           });
-          setNavigatePath("/");
-          sessionStorage.removeItem("prevPage"); // Clean up
+          // `prevPage` is deliberately *not* cleared first. The original wiped
+          // it here, so a Google sign-up begun from a team invite link lost the
+          // invite and landed on the profile page instead of joining.
+          setNavigatePath(postAuthRedirect("/"));
 
           setTimeout(() => {
             localStorage.setItem("token",response.data.token);
@@ -86,8 +89,12 @@ export default function GoogleSignup({ setAlert }) {
               user.regForm,
               user.blurhash,
               response.data.token,
-              9600000
+              SESSION_TTL_MS
             );
+            // App.jsx re-rendered /SignUp as <LoginRedirect /> once isLoggedIn
+            // flipped; nothing watches that flag under the App Router, so the
+            // navigation this component was already wired for is triggered here.
+            setShouldNavigate(true);
           }, 800);
         } else {
           // Handle unexpected response status

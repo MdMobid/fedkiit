@@ -74,15 +74,39 @@ export async function PUT(
       info.receiverDetails = { ...(info.receiverDetails ?? {}), upi };
     }
 
+    // Merged one key at a time, like `upi` above: a partial edit must not blank
+    // out settings the request did not carry.
+    const paymentMode = text("paymentMode");
+    if (paymentMode !== undefined) {
+      info.receiverDetails = {
+        ...(info.receiverDetails ?? {}),
+        mode: paymentMode === "Link" ? "Link" : "QR",
+      };
+    }
+
+    for (const [key, field] of [
+      ["paymentLink", "link"],
+      ["paymentButtonText", "buttonText"],
+      ["paymentMessage", "message"],
+    ] as const) {
+      const value = text(key);
+      if (value !== undefined) {
+        info.receiverDetails = {
+          ...(info.receiverDetails ?? {}),
+          [field]: value || null,
+        };
+      }
+    }
+
     const eventImg = form.get("eventImg");
     if (eventImg instanceof File && eventImg.size > 0) {
-      const result = await uploadImage(eventImg, "FormImages", 1000, 1000);
+      const result = await uploadImage(eventImg, "FormImages");
       if (result) info.eventImg = result.secure_url;
     }
 
     const media = form.get("media");
     if (media instanceof File && media.size > 0) {
-      const result = await uploadImage(media, "QRMediaImages", 500, 500);
+      const result = await uploadImage(media, "QRMediaImages");
       if (result) {
         info.receiverDetails = {
           ...(info.receiverDetails ?? {}),
@@ -110,7 +134,7 @@ export async function PUT(
 
     return json({
       success: true,
-      message: "Form updated successfully",
+      message: "Form info and sections updated successfully",
       form: updated,
     });
   });

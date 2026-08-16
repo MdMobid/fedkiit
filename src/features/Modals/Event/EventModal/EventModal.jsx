@@ -9,7 +9,6 @@ import rupeeIcon from "../../../../assets/images/rupeeIcon.svg";
 import { X } from "lucide-react";
 
 // import eventData from "../../../../data/eventData.json";
-import FormData from "../../../../data/FormData.json";
 import shareOutline from "../../../../assets/images/shareOutline.svg";
 import Share from "../../../../features/Modals/Event/ShareModal/ShareModal";
 // import AOS from "aos";
@@ -478,7 +477,13 @@ const EventModal = (props) => {
                     <div className={EventCardModal.backbtn}>
                       <div className={EventCardModal.eventname}>
                         {info.eventTitle}
-                        <p>
+                        {/*
+                          A <div>, not a <p> — it contains `div.price`, which
+                          contains a <p>. Same parser-reparenting hydration
+                          mismatch EventCard had; `.meta` is listed alongside
+                          `.eventname p` so the styling is unchanged.
+                        */}
+                        <div className={EventCardModal.meta}>
                           {info.participationType === "Team" ? (
                             <>
                               <MdGroups color="#f97507" size={25} />
@@ -509,7 +514,7 @@ const EventModal = (props) => {
                               {" | "}
                             </>
                           )}
-                          <div className={EventCardModal.price}>
+                          <div>
                             {info.eventAmount ? (
                               <p style={{ font: "2rem" }}>
                                 <FaRupeeSign color="#f97507" size={15} />
@@ -521,7 +526,7 @@ const EventModal = (props) => {
                               </p>
                             )}
                           </div>
-                        </p>
+                        </div>
                       </div>
                       <div className={EventCardModal.registerbtn}>
                         <button

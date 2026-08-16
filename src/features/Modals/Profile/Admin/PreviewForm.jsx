@@ -40,6 +40,11 @@ const PreviewForm = ({
   handleClose,
   showCloseBtn,
   teamCode, // [v2] invite link team code
+  // Renders in normal document flow as a page card instead of the fixed
+  // full-screen overlay. Only the three wrapper elements differ — the form
+  // itself is one copy, so a change to a step cannot land in one mode and not
+  // the other.
+  inline = false,
 }) => {
   const router = useRouter();
   const authCtx = useContext(AuthContext);
@@ -71,8 +76,11 @@ const PreviewForm = ({
     }, 1000);
   }, []);
 
+  // Locking the page behind the form only makes sense for the overlay, where
+  // the form has its own scroller. Inline it is the page, and freezing the body
+  // leaves a form taller than the viewport with no way to reach its own Submit.
   useEffect(() => {
-    if (open) {
+    if (open && !inline) {
       document.body.classList.add(styles.noScroll);
     } else {
       document.body.classList.remove(styles.noScroll);
@@ -81,7 +89,7 @@ const PreviewForm = ({
     return () => {
       document.body.classList.remove(styles.noScroll);
     };
-  }, [open]);
+  }, [open, inline]);
 
   useEffect(() => {
     constructSections();
@@ -171,42 +179,66 @@ const PreviewForm = ({
       const participationType = eventData?.participationType;
       const successMessage = eventData?.successMessage;
       console.log(participationType);
-      const handleAutoClose = async () => {
-        // [v2] If teamCode is present (invite link), auto-join the team after registration
-        if (teamCode && participationType === "Team") {
-          try {
-            const joinResponse = await api.post("/api/form/joinTeam", {
-              formId: form.id,
-              teamCode: teamCode,
-            });
-            if (joinResponse.data?.success) {
-              Alert({
-                type: "success",
-                message: joinResponse.data.message || `Joined team successfully!`,
-                position: "bottom-right",
-                duration: 3000,
-              });
-              const eventId = joinResponse.data.data?.eventId || form.id;
-              setTimeout(() => {
-                router.replace(`/Events/${form.id}/team`);
-              }, 1000);
-              return;
-            }
-          } catch (joinErr) {
-            console.error("Auto-join failed:", joinErr);
-            // Fall through to normal flow if join fails
-          }
-        }
+      // [v2] Redeems an invite link's team code once registration has gone
+      // through. Returns where to send them next, so the caller owns navigation.
+      const autoJoinTeam = async () => {
+        try {
+          const joinResponse = await api.post("/api/form/joinTeam", {
+            formId: form.id,
+            teamCode,
+          });
 
+          if (joinResponse?.data?.success) {
+            Alert({
+              type: "success",
+              message: joinResponse.data.message || `Joined team successfully!`,
+              position: "bottom-right",
+              duration: 3000,
+            });
+            return { path: `/Events/${form.id}/team`, replace: true };
+          }
+
+          return failedJoinDestination(joinResponse?.data?.message);
+        } catch (joinErr) {
+          console.error("Auto-join failed:", joinErr);
+          return failedJoinDestination(joinErr?.response?.data?.message);
+        }
+      };
+
+      // The invite could not be honoured — the team filled up while they were
+      // registering, the code is stale, or registration closed. Registration
+      // itself succeeded, so they go to the team page, which renders the team
+      // search for an unaffiliated registrant, rather than to /Events with no
+      // explanation. The reason rides along as a query param for the toast.
+      const failedJoinDestination = (reason) => {
+        const query = new URLSearchParams({ toast: "join_failed" });
+        if (reason) query.set("reason", reason);
+        return {
+          path: `/Events/${form.id}/team?${query.toString()}`,
+          replace: true,
+        };
+      };
+
+      const eventsDestination = () => {
+        if (participationType === "Team") {
+          setTeamCode(code);
+          setTeamName(team);
+        }
+        if (successMessage) setSuccessMessage(successMessage);
+        return { path: "/Events", replace: false };
+      };
+
+      const handleAutoClose = async () => {
+        const destination =
+          teamCode && participationType === "Team"
+            ? await autoJoinTeam()
+            : eventsDestination();
+
+        // Single navigation for every outcome. The delay lets the success or
+        // failure toast be read before the page changes.
         setTimeout(() => {
-          if (participationType === "Team") {
-            setTeamCode(code);
-            setTeamName(team);
-          }
-          if (successMessage) {
-            setSuccessMessage(successMessage);
-          }
-          router.push("/Events");
+          if (destination.replace) router.replace(destination.path);
+          else router.push(destination.path);
         }, 1000);
       };
 
@@ -516,7 +548,26 @@ const PreviewForm = ({
   };
 
   const renderPaymentScreen = () => {
-    const { eventType, receiverDetails, eventAmount } = formData;
+    const { eventType, eventAmount } = formData;
+    // Events created before the payment-mode setting have no `receiverDetails`
+    // at all on the free path, and no `mode` on the paid one.
+    const receiverDetails = formData.receiverDetails ?? {};
+    const paymentMode = receiverDetails.mode === "Link" ? "Link" : "QR";
+
+    // The href is admin-entered and rendered for participants, so it is checked
+    // here too rather than trusting the admin form's validation alone — that
+    // check did not exist for events saved before it, and `javascript:` in an
+    // anchor runs on click.
+    const safeLink = (() => {
+      try {
+        const parsed = new URL(receiverDetails.link ?? "");
+        return parsed.protocol === "http:" || parsed.protocol === "https:"
+          ? parsed.href
+          : null;
+      } catch {
+        return null;
+      }
+    })();
 
     const handleDownloadQR = async () => {
       try {
@@ -553,23 +604,144 @@ const PreviewForm = ({
       if (receiverDetails.upi) {
         navigator.clipboard.writeText(receiverDetails.upi)
           .then(() => {
-            alert("UPI ID copied to clipboard!");
+            setAlert({ type: "success", message: "UPI ID copied to clipboard!", position: "bottom-right", duration: 3000 });
           })
           .catch(() => {
-            alert("Failed to copy UPI ID.");
+            setAlert({ type: "error", message: "Failed to copy UPI ID.", position: "bottom-right", duration: 3000 });
           });
       }
     };
+
+    const handleCopyLink = () => {
+      const targetLink = safeLink || receiverDetails.link || receiverDetails.upi;
+      if (targetLink) {
+        navigator.clipboard.writeText(targetLink)
+          .then(() => {
+            setAlert({ type: "success", message: "Payment Link copied to clipboard!", position: "bottom-right", duration: 3000 });
+          })
+          .catch(() => {
+            setAlert({ type: "error", message: "Failed to copy link.", position: "bottom-right", duration: 3000 });
+          });
+      }
+    };
+
+    if (
+      eventType === "Paid" &&
+      currentSection.name === "Payment Details" &&
+      paymentMode === "Link"
+    ) {
+      return (
+        <div
+          style={{
+            margin: "12px auto",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 14,
+              color: "#e0e0e0",
+              textAlign: "center",
+              marginBottom: 16,
+            }}
+          >
+            Amount payable:{" "}
+            <strong style={{ color: "#ff8a00", fontSize: 16 }}>&#8377;{eventAmount}</strong>
+          </p>
+
+          <div className={styles.paymentActionButtons}>
+            {safeLink ? (
+              <a
+                href={safeLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0.65rem 1.6rem",
+                  borderRadius: "14px",
+                  background: "linear-gradient(135deg, #ff5500 0%, #ff8a00 100%)",
+                  color: "#ffffff",
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  textAlign: "center",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  boxShadow: "inset -2px -2px 6px rgba(0, 0, 0, 0.35), inset 2px 2px 6px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(255, 85, 0, 0.4)",
+                  cursor: "pointer",
+                  height: "42px",
+                  boxSizing: "border-box",
+                }}
+              >
+                {receiverDetails.buttonText || "Pay Now"}
+              </a>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0.65rem 1.6rem",
+                borderRadius: "14px",
+                background: "rgba(255, 255, 255, 0.08)",
+                color: "#ffffff",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                boxShadow: "inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.15), 0 6px 16px rgba(0, 0, 0, 0.3)",
+                cursor: "pointer",
+                height: "42px",
+                boxSizing: "border-box",
+              }}
+            >
+              Copy Link
+            </button>
+          </div>
+
+          {!safeLink && !receiverDetails.upi && (
+            <p style={{ fontSize: 12, color: "#ff6b6b", textAlign: "center", marginTop: 12 }}>
+              The payment link for this event is missing or invalid. Please
+              contact fedkiit@gmail.com before continuing.
+            </p>
+          )}
+
+          {receiverDetails.message && (
+            <p
+              style={{
+                fontSize: 12,
+                marginTop: 12,
+                color: "lightgray",
+                textAlign: "center",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {receiverDetails.message}
+            </p>
+          )}
+        </div>
+      );
+    }
 
     if (eventType === "Paid" && currentSection.name === "Payment Details") {
       return (
         <div
           style={{
-            margin: "8px auto",
+            margin: "12px auto",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
+            width: "100%",
+            textAlign: "center",
           }}
         >
           {receiverDetails.media && (
@@ -584,26 +756,72 @@ const PreviewForm = ({
                 width: 200,
                 height: 200,
                 objectFit: "contain",
+                borderRadius: "12px",
+                backgroundColor: "#fff",
+                padding: "8px",
               }}
             />
           )}
 
-          {/* ✅ Download & Copy Buttons */}
-          <div style={{ display: "flex", gap: "10px", marginTop: 10 }}>
-            <Button onClick={handleDownloadQR}>Download QR</Button>
-            <Button onClick={handleCopyUPIID}>Copy UPI ID</Button>
+          {/* ✅ Download & Copy Link Buttons */}
+          <div className={styles.paymentActionButtons}>
+            <button
+              type="button"
+              onClick={handleDownloadQR}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0.65rem 1.4rem",
+                borderRadius: "14px",
+                background: "linear-gradient(135deg, #ff5500 0%, #ff8a00 100%)",
+                color: "#ffffff",
+                fontSize: "0.9rem",
+                fontWeight: 700,
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                boxShadow: "inset -2px -2px 6px rgba(0, 0, 0, 0.35), inset 2px 2px 6px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(255, 85, 0, 0.4)",
+                cursor: "pointer",
+                height: "42px",
+                boxSizing: "border-box",
+              }}
+            >
+              Download QR
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0.65rem 1.4rem",
+                borderRadius: "14px",
+                background: "rgba(255, 255, 255, 0.08)",
+                color: "#ffffff",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                boxShadow: "inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.15), 0 6px 16px rgba(0, 0, 0, 0.3)",
+                cursor: "pointer",
+                height: "42px",
+                boxSizing: "border-box",
+              }}
+            >
+              Copy Link
+            </button>
           </div>
 
           <p
             style={{
               fontSize: 12,
-              marginTop: 12,
+              marginTop: 14,
               color: "lightgray",
               textAlign: "center",
+              lineHeight: 1.5,
             }}
           >
             Make the payment of{" "}
-            <strong style={{ color: "#fff" }}>&#8377;{eventAmount}</strong>{" "}
+            <strong style={{ color: "#ff8a00" }}>&#8377;{eventAmount}</strong>{" "}
             using QR-Code or Pay using UPI ID:{" "}
             <strong style={{ color: "#fff" }}>{receiverDetails.upi} (No Refund Policy)</strong>
           </p>
@@ -617,10 +835,26 @@ const PreviewForm = ({
 
   return (
     <>
-      open && (
-      <div className={styles.mainPreview}>
-        <div className={styles.previewContainerWrapper}>
-          <div ref={wrapperRef} className={styles.previewContainer}>
+      {/*
+        This guard was written without its braces, so `open && (` and the
+        matching `)` were rendered as literal text at the top and bottom of
+        every registration form — participants saw "open && (" above the
+        heading. Both call sites already mount this only when the flag is set,
+        so making it a real conditional changes nothing else.
+      */}
+      {open && (
+      <div className={inline ? styles.pagePreview : styles.mainPreview}>
+        <div
+          className={
+            inline ? styles.pagePreviewWrapper : styles.previewContainerWrapper
+          }
+        >
+          <div
+            ref={wrapperRef}
+            className={`${styles.previewContainer} ${
+              inline ? styles.inlineContainer : ""
+            }`}
+          >
             {showCloseBtn &&
               (isEditing ? (
                 <div onClick={handleClose} className={styles.closeBtn}>
@@ -682,11 +916,33 @@ const PreviewForm = ({
                   }}
                 >
                   {inboundList() && inboundList().backSection && (
-                    <Button style={{ marginRight: "10px" }} onClick={onBack}>
+                    <Button
+                      style={{
+                        marginRight: "12px",
+                        borderRadius: "14px",
+                        height: "44px",
+                        padding: "0.65rem 1.6rem",
+                        background: "rgba(255, 255, 255, 0.08)",
+                        color: "#ffffff",
+                        border: "1px solid rgba(255, 255, 255, 0.16)",
+                        boxShadow: "inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.15)",
+                      }}
+                      onClick={onBack}
+                    >
                       Back
                     </Button>
                   )}
                   <Button
+                    style={{
+                      borderRadius: "14px",
+                      height: "44px",
+                      padding: "0.65rem 2.2rem",
+                      background: "linear-gradient(135deg, #ff5500 0%, #ff8a00 100%)",
+                      color: "#ffffff",
+                      fontWeight: 700,
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      boxShadow: "inset -2px -2px 6px rgba(0, 0, 0, 0.35), inset 2px 2px 6px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(255, 85, 0, 0.4)",
+                    }}
                     onClick={
                       inboundList() && inboundList().nextSection
                         ? onNext
@@ -763,7 +1019,7 @@ const PreviewForm = ({
           </div>
         </div>
       </div>
-      )
+      )}
       <Alert />
     </>
   );

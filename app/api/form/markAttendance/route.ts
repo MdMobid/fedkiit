@@ -1,25 +1,36 @@
 import { markAttendance } from "@/lib/services/attendance";
 import { body, expressError, handle, json } from "@/lib/api/express";
-import { getCurrentUser, isMember } from "@/lib/auth/access";
+import { getCurrentUser, isAdmin } from "@/lib/auth/access";
 
 /**
  * POST /api/form/markAttendance
  * Port of controllers/registration/markAttendance.js.
  *
- * Requires a club member. The Express route had its `checkAccess` call
- * commented out, so any signed-in user could mark any attendee present.
+ * ADMIN only. This deliberately diverges from the Express route, which has its
+ * `checkAccess` commented out entirely and so accepts unauthenticated calls.
+ *
+ * The QR token alone is not an access control: a participant can mint their own
+ * through /api/form/attendanceCode — that endpoint exists so they can display
+ * their code — and could then post it straight back here to mark themselves
+ * present. Restricting who may *scan* is what closes that, and it has to live
+ * here rather than only on the page, because the page is just a UI over this
+ * call.
+ *
+ * Issuing a code stays open to any signed-in user; only redeeming one is
+ * restricted.
+ *
+ * Responds `{ message, attendance }` at the top level, which is the shape
+ * AttendancePage reads.
  */
 export async function POST(request: Request) {
   return handle(async () => {
     const user = await getCurrentUser();
     if (!user) return expressError(401, "Token is required");
-    if (!isMember(user)) return expressError(403, "Unauthorized");
+    if (!isAdmin(user)) return expressError(403, "Unauthorized");
 
-    const b = await body<Record<string, string>>(request);
-    const data = await markAttendance({
-      attendanceId: b.attendanceId ?? b.token ?? b.id ?? "",
-    });
+    const b = await body<{ formId?: string; token?: string }>(request);
+    const result = await markAttendance({ formId: b.formId, token: b.token });
 
-    return json({ success: true, message: data.message, data });
+    return json(result);
   });
 }

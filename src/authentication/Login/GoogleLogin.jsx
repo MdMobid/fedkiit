@@ -5,12 +5,12 @@ import { useContext, useState, useEffect } from "react";
 import style from "../SignUp/style/Signup.module.scss";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import users from "../../data/user.json";
-import AuthContext from "../../context/AuthContext";
+import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import google from "../../assets/images/google.png";
 import { Alert, MicroLoading } from "../../microInteraction";
 import { api } from "../../services";
 import { useRouter } from "next/navigation";
+import postAuthRedirect from "../../utils/postAuthRedirect";
 
 export default function GoogleLogin() {
   const [alert, setAlert] = useState(null);
@@ -40,9 +40,10 @@ export default function GoogleLogin() {
     }
   }, [alert]);
 
+  // `replace`, not `push`: App.jsx redirected with <Navigate replace />.
   useEffect(() => {
     if (shouldNavigate) {
-      router.push(navigatePath);
+      router.replace(navigatePath);
       setShouldNavigate(false);
     }
   }, [shouldNavigate, navigatePath, router]);
@@ -67,7 +68,7 @@ export default function GoogleLogin() {
             duration: 2800,
           });
 
-          setNavigatePath(sessionStorage.getItem("prevPage") || "/");
+          setNavigatePath(postAuthRedirect());
 
           setTimeout(() => {
             localStorage.setItem("token", response.data.token);
@@ -88,8 +89,12 @@ export default function GoogleLogin() {
               user.regForm,
               user.blurhash,
               response.data.token,
-              9600000
+              SESSION_TTL_MS
             );
+            // App.jsx re-rendered /Login as <LoginRedirect /> once isLoggedIn
+            // flipped; nothing watches that flag under the App Router, so the
+            // navigation this component was already wired for is triggered here.
+            setShouldNavigate(true);
           }, 800);
 
         } else {

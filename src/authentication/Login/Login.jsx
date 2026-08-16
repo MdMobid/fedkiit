@@ -8,15 +8,15 @@ import style from "./styles/Login.module.scss";
 import Input from "../../components/Core/Input";
 import Button from "../../components/Core/Button";
 import Text from "../../components/Core/Text";
-import users from "../../data/user.json";
 import { api } from "../../services";
-import AuthContext from "../../context/AuthContext";
+import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import { RecoveryContext } from "../../context/RecoveryContext";
 import GoogleLogin from "./GoogleLogin";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Alert, MicroLoading } from "../../microInteraction";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import postAuthRedirect from "../../utils/postAuthRedirect";
 
 const Login = () => {
   const router = useRouter();
@@ -40,9 +40,11 @@ const Login = () => {
     }
   }, [alert]);
 
+  // `replace`, not `push`: App.jsx redirected with <Navigate replace />, so the
+  // login page must not sit in the history stack behind the destination.
   useEffect(() => {
     if (shouldNavigate) {
-      router.push(navigatePath);
+      router.replace(navigatePath);
       setShouldNavigate(false);
     }
   }, [shouldNavigate, navigatePath, router]);
@@ -81,7 +83,7 @@ const Login = () => {
           duration: 2800,
         });
 
-        setNavigatePath(sessionStorage.getItem("prevPage") || "/");
+        setNavigatePath(postAuthRedirect());
 
         setTimeout(() => {
           localStorage.setItem("token", response.data.token);
@@ -102,8 +104,13 @@ const Login = () => {
             user.regForm,
             user.blurhash,
             response.data.token,
-            9600000
+            SESSION_TTL_MS
           );
+          // App.jsx re-rendered /Login as <LoginRedirect /> the moment
+          // isLoggedIn flipped. App Router routes are files and nothing watches
+          // that flag, so the navigation this component was already wired for
+          // has to be triggered explicitly.
+          setShouldNavigate(true);
         }, 800);
         // console.log(authCtx);
 
@@ -136,7 +143,7 @@ const Login = () => {
   };
 
   return (
-    <div>
+    <div className={style.page}>
       <div className={style.container}>
         <Link href={"/"}>
           <div className={style.ArrowBackIcon}>
@@ -152,7 +159,7 @@ const Login = () => {
             style={{
               paddingTop: "10px",
               background: "var(--primary)",
-              width: "20%",
+              width: "max-content",
               WebkitBackgroundClip: "text",
               color: "transparent",
             }}
@@ -211,7 +218,7 @@ const Login = () => {
               style={{
                 fontSize: "0.7rem",
                 cursor: "pointer",
-                width: "40%",
+                width: "max-content",
                 marginLeft: "0.4rem",
                 background: "var(--primary)",
                 WebkitBackgroundClip: "text",
@@ -246,8 +253,19 @@ const Login = () => {
               Don't have an account?{" "}
               <Link
                 href="/signup"
-                onClick={(e) => {
-                  sessionStorage.setItem("prevPage", window.location.pathname);
+                onClick={() => {
+                  // Only remember this page if nothing is already pending.
+                  // Overwriting unconditionally — as the original did — threw
+                  // away the destination `ProtectedRoute` had just stored, so
+                  // someone arriving on a team invite link and choosing "Sign
+                  // Up" lost the invite before signing up. `/Login` is never a
+                  // useful place to return to anyway.
+                  if (!sessionStorage.getItem("prevPage")) {
+                    sessionStorage.setItem(
+                      "prevPage",
+                      window.location.pathname,
+                    );
+                  }
                 }}
                 style={{
                   background: "var(--primary)",

@@ -8,10 +8,12 @@ import Button from "../../components/Core/Button";
 import Load from "../../microInteraction/Load/Load";
 import styles from "./style/CompleteProfile.module.scss";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AuthContext from "../../context/AuthContext";
+import AuthContext, { SESSION_TTL_MS } from "../../context/AuthContext";
 import { Alert, MicroLoading } from "../../microInteraction";
 import { api } from "../../services";
 import { useRouter, usePathname } from "next/navigation";
+import postAuthRedirect from "../../utils/postAuthRedirect";
+import { YEAR_OPTIONS } from "../../data/yearOptions";
 
 function CompleteProfile() {
   const [loadingEffect, setLoad] = useState(false);
@@ -27,7 +29,6 @@ function CompleteProfile() {
     college: "",
     contactNo: "",
     img: "",
-    year: "",
   });
   const [errors, setErrors] = useState({});
 
@@ -48,15 +49,6 @@ function CompleteProfile() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  const options = [
-    { value: "1st", text: "1st year" },
-    { value: "2nd", text: "2nd year" },
-    { value: "3rd", text: "3rd year" },
-    { value: "4th", text: "4th year" },
-    { value: "5th", text: "5th year" },
-    { value: "Passout", text: "Passout" },
-  ];
 
   useEffect(() => {
     setAlert({
@@ -118,14 +110,21 @@ function CompleteProfile() {
             userObject.github,
             userObject.linkedin,
             userObject.designation,
-            userObject.regForm,
-            userObject.access,
-            userObject.editProfileCount,
+            // `access` is the 12th argument, not the 13th. These four were off
+            // by one against the signature, so `regForm` landed in `access` —
+            // leaving every account created here with a role that matches no
+            // entry in any role list, which is how a member could lose a
+            // permission their database record still granted them.
             "USER",
+            userObject.editProfileCount,
+            userObject.regForm,
+            userObject.blurhash || "",
             "someToken",
-            7200000
+            SESSION_TTL_MS
           );
-          router.push("/");
+          // Honours a pending destination — a team invite link, typically —
+          // falling back to "/" as the original always did.
+          router.push(postAuthRedirect("/"));
         }, 3000);
 
         
@@ -187,12 +186,14 @@ function CompleteProfile() {
               error={errors.rollNumber}
             />
 
+            {/* Chosen, not derived from the roll number: a lateral-entry
+                student admitted in 2025 is in 2nd year with the 2024 batch. */}
             <Input
               type="select"
               placeholder="Select Year"
               label="Year"
               name="year"
-              options={options.map(option => ({ label: option.text, value: option.value }))}
+              options={YEAR_OPTIONS}
               value={year}
               onChange={(value) => setYear(value)}
               required

@@ -54,6 +54,19 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      // Permanent redirect for printed QR code that points to the old event.
+      // The QR is already in circulation so we redirect server-side (308) so
+      // every scanner, browser and search engine follows it automatically.
+      {
+        source: "/Events/6a74c22b4a467d7a0aac0cc6",
+        destination: "/Events/6a7797c26a9a4d018da54ba1",
+        permanent: true,
+      },
+    ];
+  },
+
   // Note: legacy capitalised URLs (/Events, /Team, /SignUp …) are *not*
   // redirected here. Next matches a redirect `source` case-insensitively, so a
   // rule from "/Events" to "/events" also matches "/events" and loops

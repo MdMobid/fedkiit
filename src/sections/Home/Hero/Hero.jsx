@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import styles from "./styles/Hero.module.scss";
 import CarouselImg from "../../../data/Carousel.json";
-import { Carousel } from "../../../components";
+import HeroGallery from "../../../components/HeroGallery/HeroGallery";
 import { AnimatedBox } from "../../../assets/animations/AnimatedBox";
+import { cdn } from "../../../utils/cloudinary";
 
 const titles = [
   "Entrepreneurship.",
@@ -21,14 +22,41 @@ const titles = [
 ];
 
 function Hero() {
+  const mainRef = React.useRef(null);
   const [currentTitle, setCurrentTitle] = useState("");
   const [titleIndex, setTitleIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return undefined;
+
+    const handleMouseMove = (e) => {
+      const rect = main.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      main.style.setProperty("--grid-mouse-x", `${x}px`);
+      main.style.setProperty("--grid-mouse-y", `${y}px`);
+      main.style.setProperty("--grid-spotlight-opacity", "1");
+    };
+
+    const handleMouseLeave = () => {
+      main.style.setProperty("--grid-spotlight-opacity", "0");
+    };
+
+    main.addEventListener("mousemove", handleMouseMove);
+    main.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      main.removeEventListener("mousemove", handleMouseMove);
+      main.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  useEffect(() => {
     const title = titles[titleIndex];
-    const typingSpeed = isDeleting ? 50 : 150;
+    const typingSpeed = isDeleting ? 40 : 110;
 
     const interval = setInterval(() => {
       if (isDeleting) {
@@ -51,51 +79,34 @@ function Hero() {
   }, [charIndex, isDeleting, titleIndex]);
 
   return (
-    <div className={styles.main}>
+    <section ref={mainRef} className={styles.main} aria-label="Hero">
       <div className={styles.hero}>
         <div className={styles.heroTextContainer}>
+          <div className={styles.textBackdrop} aria-hidden="true">
+            <img src={cdn("/assets/design-3.png", 384)} alt="" loading="lazy" decoding="async" />
+          </div>
           <AnimatedBox direction="left">
-            <div className={styles.largeContent}>
-              <p>
-                Nurturing Using Innovative & Creative strategies{" "}
-                <span
-                  className={styles.dynamicText}
-                  style={{
-                    background: "var(--primary)",
-                    WebkitBackgroundClip: "text",
-                    color: "transparent",
-                  }}
-                >
-                  <h3 className={styles.typing}>{currentTitle}</h3>
-                </span>{" "}
+            <div className={styles.textContent}>
+              <p className={styles.eyebrow}>Federation Of Entrepreneurship Development</p>
+              <h1 className={styles.largeText}>
+                Nurturing using innovative &amp; creative strategies
+                <span className={styles.dynamicText}>
+                  <span className={styles.typing}>{currentTitle}</span>
+                </span>
+              </h1>
+              <p className={styles.lede}>
+                Inspiring{" "}
+                <span className={styles.accent}>visionaries</span> towards cultivating
+                excellence and guiding future generations toward growth.
               </p>
-            </div>
-            <div className={styles.smallContainer}>
-              <div className={styles.smallContent}>
-                <p>
-                  Inspiring{" "}
-                  <span
-                    style={{
-                      background: "var(--primary)",
-                      WebkitBackgroundClip: "text",
-                      color: "transparent",
-                    }}
-                  >
-                    visionaries
-                  </span>{" "}
-                  towards cultivating excellence and enrouting future
-                  generations towards growth.
-                </p>
-              </div>
             </div>
           </AnimatedBox>
         </div>
         <div className={styles.heroCarousel}>
-          <Carousel images={CarouselImg} />
+          <HeroGallery images={CarouselImg} />
         </div>
-        <div className={styles.circle}></div>
       </div>
-    </div>
+    </section>
   );
 }
 

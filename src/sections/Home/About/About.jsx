@@ -1,56 +1,91 @@
 "use client";
 
-import { AnimatedBox } from "../../../assets/animations/AnimatedBox";
-import styles from './styles/About.module.scss';
+import { motion } from "framer-motion";
+import styles from "./styles/About.module.scss";
 
-function About() {
+const blocks = [
+  {
+    key: "why",
+    accent: "Why",
+    title: "one should join FED?",
+    body: "We aim to empower the next generation of entrepreneurs to innovate, lead, and transform the future.",
+    image:
+      "https://uploads-ssl.webflow.com/663d299655b46de106de40d7/665730072a5e426c487dd8da_Frame%201000001327.svg",
+    alt: "Illustration of community and growth",
+    reverse: false,
+  },
+  {
+    key: "how",
+    accent: "How",
+    title: "we stay ahead?",
+    body: "Efficient leadership, strategic planning, and sustainable collaborations keep us at the foremost tiers.",
+    image:
+      "https://uploads-ssl.webflow.com/663d299655b46de106de40d7/6657309f141df2159c9ffd32_vecteezy_3d-masculino-personaje-brazo-cruzado_24387905%202%20(1).svg",
+    alt: "Illustration of a confident leader",
+    reverse: true,
+  },
+  {
+    key: "what",
+    accent: "What",
+    title: "we do in FED?",
+    body: "We help startups and organize events that promote entrepreneurship and real business opportunities.",
+    image:
+      "https://uploads-ssl.webflow.com/663d299655b46de106de40d7/66573007b67d2331b166edba_image%20526.svg",
+    alt: "Illustration of collaboration and events",
+    reverse: false,
+  },
+];
+
+export default function About() {
   return (
-    <div className={styles.container}>
-      <div className={styles.heading}>
-      <p className={styles.head}>ABOUT <span style={{ background: "var(--primary)", WebkitBackgroundClip: "text", color: "transparent" }}>US</span></p>
-      <div className={styles.bottomLine}></div>
+    <section className={styles.aboutSection} aria-label="About Us">
+      <div className={styles.innerWrap}>
+        <motion.header
+          className={styles.heading}
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h2 id="about-heading" className={styles.head}>
+            ABOUT <span className={styles.accent}>US</span>
+          </h2>
+          <div className={styles.bottomLine} aria-hidden="true" />
+          <p className={styles.subhead}>
+            Who we are, how we lead, and what we build together.
+          </p>
+        </motion.header>
+
+        <div className={styles.stack}>
+          {blocks.map((block, index) => {
+            const isEven = index % 2 === 1;
+            const xInitial = isEven ? 70 : -70;
+
+            return (
+              <motion.article
+                key={block.key}
+                className={`${styles.row} ${block.reverse ? styles.rowReverse : ""}`}
+                aria-labelledby={`about-${block.key}`}
+                initial={{ opacity: 0, x: xInitial, y: 20 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.7, ease: [0.25, 1, 0.5, 1], delay: index * 0.1 }}
+              >
+                <div className={styles.media}>
+                  <img src={block.image} alt={block.alt} loading="lazy" />
+                </div>
+                <div className={styles.copy}>
+                  <h3 id={`about-${block.key}`} className={styles.boxhead}>
+                    <span className={styles.accent}>{block.accent}</span>{" "}
+                    {block.title}
+                  </h3>
+                  <p className={styles.body}>{block.body}</p>
+                </div>
+              </motion.article>
+            );
+          })}
+        </div>
       </div>
-      
-      <AnimatedBox direction="right">
-        <div className={`${styles.box1} ${styles.boxflex}`}>
-          <img className={styles.whyfedimg} src="https://uploads-ssl.webflow.com/663d299655b46de106de40d7/665730072a5e426c487dd8da_Frame%201000001327.svg" alt="" />
-          <div className={`${styles.whyfed} ${styles.box}`}>
-              <p className={styles.boxhead}><span style={{ background: "var(--primary)", WebkitBackgroundClip: "text", color: "transparent" }}>Why</span> one should join FED?</p>
-            <div className={styles.boxinnertext}>
-            <p>
-            We aim to empower the  next generation of entrepreneurs 
-            </p>
-            <p>to innovate, lead, and transform the future.</p>
-            </div>
-          </div>
-        </div>
-      </AnimatedBox>
-      <AnimatedBox direction="left">
-        <div className={`${styles.box2} ${styles.boxflex}`}>
-          <img className={styles.howfedimg} src="https://uploads-ssl.webflow.com/663d299655b46de106de40d7/6657309f141df2159c9ffd32_vecteezy_3d-masculino-personaje-brazo-cruzado_24387905%202%20(1).svg" alt="" />
-          <div className={`${styles.howfed} ${styles.box}`}>
-              <p className={styles.boxhead}><span style={{ background: "var(--primary)", WebkitBackgroundClip: "text", color: "transparent" }}>How</span> we are still on top?</p>
-            <div className={styles.boxinnertext}>
-            <p>Efficient leaderships, strategic planning and sustainable</p>
-            <p>executive collaborations keeps us at foremost tiers.</p>
-            </div>
-          </div>
-        </div>
-      </AnimatedBox>
-      <AnimatedBox direction="right">
-        <div className={`${styles.box3} ${styles.boxflex}`}>
-          <img className={styles.whatfedimg} src="https://uploads-ssl.webflow.com/663d299655b46de106de40d7/66573007b67d2331b166edba_image%20526.svg" alt="" />
-          <div className={`${styles.whatfed} ${styles.box}`}>
-              <p className={styles.boxhead}><span style={{ background: "var(--primary)", WebkitBackgroundClip: "text", color: "transparent" }}>What</span> we do in FED?</p>
-            <div className={styles.boxinnertext}>
-            <p>We help startups and organise events to promote</p>
-            <p>entrepreneurships and business opportunities.</p> 
-            </div>
-          </div>
-        </div>
-      </AnimatedBox>
-    </div>
+    </section>
   );
 }
-
-export default About;
