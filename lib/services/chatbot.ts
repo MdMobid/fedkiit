@@ -423,8 +423,12 @@ async function buildContext(intents: DetectedIntents, isLoggedIn = false): Promi
 
 function isRetryable(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /429|503|500|rate.?limit|quota|resource_exhausted|high demand|temporar|unavailable|overloaded/i.test(
-    message,
+  const name = error instanceof Error ? error.name : "";
+  return (
+    /abort/i.test(name) ||
+    /429|503|500|rate.?limit|quota|resource_exhausted|high demand|temporar|unavailable|overloaded|timeout|timed out|aborted/i.test(
+      message,
+    )
   );
 }
 
@@ -455,10 +459,13 @@ async function callGemini(
 
       try {
         const client = new GoogleGenerativeAI(key);
-        const model = client.getGenerativeModel({
-          model: modelName,
-          systemInstruction,
-        });
+        const model = client.getGenerativeModel(
+          {
+            model: modelName,
+            systemInstruction,
+          },
+          { timeout: env.GEMINI_TIMEOUT_MS },
+        );
 
         const chat = model.startChat({
           history,

@@ -34,6 +34,7 @@ const schema = z.object({
 
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GEMINI_FALLBACK_MODELS: z.string().default("gemini-3.5-flash,gemini-3.5-flash-lite"),
+  GEMINI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
   CHATBOT_NAME: z.string().default("FEDI"),
 
   CERT_ORG: z.string().optional(),
