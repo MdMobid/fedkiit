@@ -52,7 +52,11 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--depth);
-  overflow: hidden;
+  /* Not `overflow: hidden`: an open dropdown hangs below the section it sits
+     in, and clipping here cut the domain list off after four options, so the
+     fifth (PR & Finance) could not be picked with a mouse. Nothing needs the
+     clip — the container inside is padded and has no background of its own. */
+  overflow: visible;
 }
 
 .previewContainer {
