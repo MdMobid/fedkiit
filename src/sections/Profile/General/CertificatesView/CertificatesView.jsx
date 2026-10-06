@@ -19,7 +19,7 @@ const Events = () => {
   const analyticsPath = "/profile/events/Analytics";
   const createCertificatesPath = "/profile/events/createCertificates";
   const viewCertificatesPath = "/profile/events/viewCertificates";
-  
+
 
   const analyticsAccessRoles = [
     "PRESIDENT",
@@ -71,7 +71,7 @@ const Events = () => {
         //   setEvents(sortEventsByDate(localEvents));
         // } else {
         //   const filteredEvents = localEvents.filter((event) =>
-             userEvents.includes(event._id)
+        userEvents.includes(event._id)
         //   );
         //   setEvents(sortEventsByDate(filteredEvents));
         // }
@@ -126,9 +126,9 @@ const Events = () => {
                     <th className={styles.mobilewidth}>Event Date</th>
                     <th className={styles.mobilewidth}>Certificates</th>
                     {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
-                        <>
-                      <th className={styles.mobilewidth}>Manage Mail</th>
-                      <th className={styles.mobilewidth}>Create/Edit</th>
+                      <>
+                        <th className={styles.mobilewidth}>Manage Mail</th>
+                        <th className={styles.mobilewidth}>Create/Edit</th>
                       </>
                     )}
                     {/* Add more headers */}
@@ -137,8 +137,8 @@ const Events = () => {
 
                 <tbody>
                   {events.map((event) => (
-                    <tr key={event._id}>
-                      <td className={styles.mobilewidth} style={{fontWeight:"500",paddingRight:"10px"}}>
+                    <tr key={event.id || event._id}>
+                      <td className={styles.mobilewidth} style={{ fontWeight: "500", paddingRight: "10px" }}>
                         {event.info.eventTitle}
                       </td>
                       <td style={{ fontWeight: "200" }}>
@@ -191,7 +191,7 @@ const Events = () => {
                           </Link>
                         </td>
                       )}
-                      
+
                     </tr>
                   ))}
                 </tbody>
