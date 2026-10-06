@@ -17,6 +17,9 @@ const SectionValidation = ({
 }) => {
   const wrapperRef = useRef(null);
   const scrollRef = useRef(null);
+  // The section's first validation has no field: it is where the section
+  // goes when no answer rule below matches (or when it has none).
+  const defaultRule = section.validations?.[0];
 
   useEffect(() => {
     window.addEventListener("mousedown", handleClickOutside);
@@ -32,20 +35,17 @@ const SectionValidation = ({
     }
   };
 
+  // Any section but this one. This used to offer only sections further down
+  // the list, so a section added later could never be placed earlier in the
+  // flow — Skills & Experience, created after Area of Interest, could not be
+  // shown before it without deleting and rebuilding the form.
   const getSectionOptions = () => {
-    const currentIndex = sections.findIndex((sec) => sec._id === section?._id);
-
     const options = sections
-      .map((sec, index) => {
-        if (index > currentIndex && index !== currentIndex) {
-          return {
-            label: `${sec.name}_${sec._id}`,
-            value: sec._id,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
+      .filter((sec) => sec._id !== section?._id)
+      .map((sec) => ({
+        label: `${sec.name}_${sec._id}`,
+        value: sec._id,
+      }));
 
     const metaOptions =
       meta !== undefined
@@ -63,21 +63,41 @@ const SectionValidation = ({
       <Text style={{ marginBottom: "12px" }} variant={"secondary"}>
         Section Redirects
       </Text>
-      <Input
-        value={
-          section.validations[section.validations.length - 1]?.field_id || ""
-        }
-        type="select"
-        placeholder="Enter Field ID"
-        label={"Bind to Field"}
-        options={fields.map((field) => ({
-          label: field.name ? `${field.name}_${field._id}` : field._id,
-          value: field._id,
-        }))}
-        onChange={(option) => onChangeValidation(option, "field_id")}
-        className={styles.fieldInput}
-        containerClassName={styles.bindInptContainer}
-      />
+      {defaultRule && (
+        <Input
+          value={defaultRule.onNext || "submit"}
+          label="Otherwise go to"
+          type="select"
+          options={[
+            ...getSectionOptions(),
+            { label: "End & Submit", value: "submit" },
+          ]}
+          placeholder="Choose Section"
+          onChange={(option) =>
+            onChangeValidation(option, "onNext", defaultRule._id)
+          }
+          className={styles.fieldInput}
+          containerClassName={styles.bindInptContainer}
+        />
+      )}
+
+      {fields.length > 0 && (
+        <Input
+          value={
+            section.validations[section.validations.length - 1]?.field_id || ""
+          }
+          type="select"
+          placeholder="Enter Field ID"
+          label={"Bind to Field"}
+          options={fields.map((field) => ({
+            label: field.name ? `${field.name}_${field._id}` : field._id,
+            value: field._id,
+          }))}
+          onChange={(option) => onChangeValidation(option, "field_id")}
+          className={styles.fieldInput}
+          containerClassName={styles.bindInptContainer}
+        />
+      )}
 
       {section.validations.map(
         (valid, index) =>
