@@ -466,7 +466,10 @@ const Section = (props) => {
         >
           {section.name}
         </Text>
-        {isIncludesOptions().length > 0 && (
+        {/* Every section gets redirects, not only ones with an option field:
+            "Otherwise go to" is how a section with only text questions says
+            where to go next, and there was no way to set it before. */}
+        {sections.length > 1 && (
           <GrNavigate
             size={24}
             color="#FF8A00"
