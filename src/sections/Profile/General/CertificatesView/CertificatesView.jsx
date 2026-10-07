@@ -124,11 +124,11 @@ const Events = () => {
                   <tr>
                     <th className={styles.mobilewidth}>Event Name</th>
                     <th className={styles.mobilewidth}>Event Date</th>
-                    <th className={styles.mobilewidth}>Certificates</th>
                     {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
                       <>
-                        <th className={styles.mobilewidth}>Manage Mail</th>
                         <th className={styles.mobilewidth}>Create/Edit</th>
+                        <th className={styles.mobilewidth}>Manage Mails</th>
+                        <th className={styles.mobilewidth}>Certificates</th>
                       </>
                     )}
                     {/* Add more headers */}
@@ -145,51 +145,23 @@ const Events = () => {
                         {formatDate(event.info.eventDate)}
                       </td>
 
-                      <td>
-                        <Link href={`${viewCertificatesPath}/${event.id}`}>
-                          <button
-                            style={{
-                              marginLeft: "auto",
-                              whiteSpace: "nowrap",
-                              height: "fit-content",
-                              color: "orange",
-                            }}
-                          >
-                            View
-                          </button>
-                        </Link>
-                      </td>
                       {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
-                        <td>
-                          <Link href={`${SendCertificatePath}/${event.id}`}>
-                            <button
-                              style={{
-                                marginLeft: "auto",
-                                whiteSpace: "nowrap",
-                                height: "fit-content",
-                                color: "orange",
-                              }}
-                            >
-                              View
-                            </button>
-                          </Link>
-                        </td>
-                      )}
-                      {(analyticsAccessRoles.includes(authCtx?.user?.access) || authCtx?.user?.email == "srex@fedkiit.com") && (
-                        <td>
-                          <Link href={`${createCertificatesPath}/${event.id}`}>
-                            <button
-                              style={{
-                                marginLeft: "auto",
-                                whiteSpace: "nowrap",
-                                height: "fit-content",
-                                color: "orange",
-                              }}
-                            >
-                              View
-                            </button>
-                          </Link>
-                        </td>
+                        [createCertificatesPath, SendCertificatePath, viewCertificatesPath].map((basePath) => (
+                          <td key={basePath}>
+                            <Link href={`${basePath}/${event.id}`}>
+                              <button
+                                style={{
+                                  marginLeft: "auto",
+                                  whiteSpace: "nowrap",
+                                  height: "fit-content",
+                                  color: "orange",
+                                }}
+                              >
+                                View
+                              </button>
+                            </Link>
+                          </td>
+                        ))
                       )}
 
                     </tr>

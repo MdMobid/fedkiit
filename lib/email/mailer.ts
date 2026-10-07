@@ -37,6 +37,11 @@ export type MailInput = {
   html: string;
   text?: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content?: Buffer | string;
+    path?: string;
+  }>;
 };
 
 export type MailResult =
@@ -66,6 +71,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
     html: input.html,
     text: input.text ?? stripHtml(input.html),
     replyTo: input.replyTo ?? "fedkiit@gmail.com",
+    attachments: input.attachments,
   };
 
   const attempts: Array<{
@@ -73,9 +79,9 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
     from: string | undefined;
     label: "primary" | "secondary";
   }> = [
-    { client: primaryClient(), from: env.EMAIL_FROM, label: "primary" },
-    { client: secondaryClient(), from: env.EMAIL_FROM_2, label: "secondary" },
-  ];
+      { client: primaryClient(), from: env.EMAIL_FROM, label: "primary" },
+      { client: secondaryClient(), from: env.EMAIL_FROM_2, label: "secondary" },
+    ];
 
   const failures: string[] = [];
 

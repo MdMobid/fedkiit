@@ -1,5 +1,6 @@
 import { sendCertificateBatch } from "@/lib/services/certificates";
 import { body, expressError, handle, json } from "@/lib/api/express";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { getCurrentUser, isAdmin } from "@/lib/auth/access";
 
 /**
@@ -26,10 +27,20 @@ export async function POST(request: Request) {
     if (!user) return expressError(401, "Token is required");
     if (!isAdmin(user)) return expressError(403, "Unauthorized");
 
+    await enforceRateLimit({
+      action: "send-certificates",
+      limit: 30,
+      windowSeconds: 60,
+      subject: user.id,
+    });
+
     const b = await body<{
       eventId?: string;
       recipients?: Array<{ email: string; fieldValues?: Record<string, string> }>;
       emails?: string[];
+      subject?: string;
+      body?: string;
+      frequency?: number;
       resend?: boolean;
     }>(request);
 
@@ -40,6 +51,9 @@ export async function POST(request: Request) {
     const data = await sendCertificateBatch({
       eventId: b.eventId ?? "",
       recipients,
+      subject: b.subject,
+      body: b.body,
+      frequency: b.frequency,
       resend: b.resend === true,
     });
 

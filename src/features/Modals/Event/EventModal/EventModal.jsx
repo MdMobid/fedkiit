@@ -369,7 +369,7 @@ const EventModal = (props) => {
     }
   };
 
-  const url = window.location.href;
+  const url = typeof window !== "undefined" ? window.location.href : "";
 
   return (
     <div
