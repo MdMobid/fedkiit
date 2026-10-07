@@ -3,6 +3,17 @@
 import { Input } from "../../../../components";
 import styles from "./styles/Preview.module.scss";
 
+/**
+ * A field's options. Admins type them as "A, B, C", so each is trimmed —
+ * untrimmed, every answer after the first was saved with a leading space
+ * (" Marketing"), which broke filtering the registrations sheet by domain.
+ */
+const optionsOf = (field) =>
+  String(field.value ?? "")
+    .split(",")
+    .map((option) => option.trim())
+    .filter(Boolean);
+
 const getFieldPlaceholder = (field) => {
   if (field.type === "select") return `Choose ${field.name}`;
   if (field.placeholder) return field.placeholder;
@@ -31,7 +42,7 @@ const Section = ({ section, handleChange }) => {
   const getInputFields = (field) => {
     const validTypes = ["checkbox", "radio"];
     if (validTypes.includes(field.type)) {
-      const valueToArray = field.value.split(",");
+      const valueToArray = optionsOf(field);
       return valueToArray.map((value, index) => (
         <div
           key={index}
@@ -103,9 +114,10 @@ const Section = ({ section, handleChange }) => {
               }}
               options={
                 field.type === "select"
-                  ? field.value.split(",").map((option) => {
-                      return { value: option, label: option };
-                    })
+                  ? optionsOf(field).map((option) => ({
+                      value: option,
+                      label: option,
+                    }))
                   : []
               }
             />
@@ -141,9 +153,10 @@ const Section = ({ section, handleChange }) => {
                     }}
                     options={
                       field.type === "select"
-                        ? field.value.split(",").map((option) => {
-                            return { value: option, label: option };
-                          })
+                        ? optionsOf(field).map((option) => ({
+                            value: option,
+                            label: option,
+                          }))
                         : []
                     }
                   />

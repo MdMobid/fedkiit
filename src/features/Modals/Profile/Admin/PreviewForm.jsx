@@ -35,6 +35,34 @@ const operators = [
 ];
 const hasOptions = ["select", "checkbox", "radio"];
 
+/**
+ * Whether an answer equals a rule's option. Checkbox answers are arrays, the
+ * rest strings. Compared trimmed: options are typed "A, B, C", and answers
+ * saved before the options were trimmed kept the leading space.
+ */
+const answerMatches = (answer, option) => {
+  const want = String(option ?? "").trim();
+  if (Array.isArray(answer)) {
+    return answer.some((item) => String(item).trim() === want);
+  }
+  return typeof answer === "string" && answer.trim() === want;
+};
+
+/**
+ * The answer rule that applies to a section, if any. Each rule is checked
+ * against the field it is bound to (`field_id`). It used to be checked against
+ * every field in the section, so a "Yes" on one question could fire a rule
+ * written for another — and a ticked checkbox crashed the check outright,
+ * since its answer is an array with no `trim`.
+ */
+const matchedRule = (section) =>
+  section?.validations
+    ?.filter((rule) => rule.field_id)
+    .find((rule) => {
+      const field = section.fields?.find((fld) => fld._id === rule.field_id);
+      return field && answerMatches(field.onChangeValue, rule.values);
+    });
+
 const PreviewForm = ({
   isEditing,
   eventData,
@@ -155,19 +183,7 @@ const PreviewForm = ({
     });
 
     const newSections = updatedSections.map((section) => {
-      const isHavingFieldValidations = section?.validations?.filter(
-        (valid) => valid.field_id
-      );
-
-      let isMatched = false;
-      if (isHavingFieldValidations.length > 0) {
-        isMatched = isHavingFieldValidations.some((valid) => {
-          return section.fields.some((fld) => {
-            return fld.onChangeValue === valid.values;
-          });
-        });
-      }
-
+      const isMatched = Boolean(matchedRule(section));
       const nextSection = getOutboundList(data, section._id)?.nextSection;
 
       return {
@@ -344,31 +360,53 @@ const PreviewForm = ({
 
   const inboundList = () => {
     if (!currentSection) return null;
-    let nextSection = currentSection?.validations[0]?.onNext;
-    let backSection = currentSection.validations[0]?.onBack;
-    const isHavingFieldValidations = currentSection?.validations?.filter(
-      (valid) => valid.field_id
-    );
+    isMetaExist();
 
-    if (isHavingFieldValidations.length > 0) {
-      const isMatched = isHavingFieldValidations.find((valid) => {
-        return currentSection.fields?.find((fld) => {
-          return fld?.onChangeValue?.trim() === valid?.values?.trim();
-        });
-      });
-      nextSection = isMatched ? isMatched?.onNext : nextSection;
-      backSection = isMatched ? isMatched?.onBack : backSection;
-    }
+    // A matching answer rule wins; otherwise the section's default applies.
+    // A rule whose target is null or "submit" ends the form, so the matched
+    // rule is used as-is rather than falling back to the default.
+    const rule = matchedRule(currentSection);
+    const nextSection = rule
+      ? rule.onNext
+      : currentSection.validations?.[0]?.onNext;
 
-    if (isMetaExist() && currentSection?.name === "Payment Details") {
-      const lastIsCompleted = isCompleted[isCompleted.length - 1];
-      backSection = lastIsCompleted;
-    }
+    // Back goes to where the participant actually came from — the top of the
+    // visited stack — not to the section's stored `onBack`. That field is
+    // filled in by the form builder from the order sections were *created*
+    // in, so it pointed at pages a participant had never seen (Marketing ->
+    // Operations Task, Creative -> PR & Finance).
+    const backSection = isCompleted.filter((id) => id !== "Submitted").at(-1);
 
     return {
       nextSection: data.find((sec) => sec._id === nextSection) || null,
       backSection: data.find((sec) => sec._id === backSection) || null,
     };
+  };
+
+  /**
+   * Whether the main button reads Next rather than Submit.
+   *
+   * Besides a real next section, it stays Next while a required question this
+   * section branches on is unanswered. The section's fallback is often
+   * "submit", so the button used to say Submit on the domain question until a
+   * domain was picked — as if the form ended there. Pressing it then goes
+   * through `onNext`, whose required-field check asks for the answer.
+   */
+  const hasNextStep = () => {
+    if (inboundList()?.nextSection) return true;
+    return Boolean(
+      currentSection?.validations?.some((rule) => {
+        if (!rule.field_id) return false;
+        const field = currentSection.fields?.find(
+          (fld) => fld._id === rule.field_id
+        );
+        const answer = field?.onChangeValue;
+        const answered = Array.isArray(answer)
+          ? answer.length > 0
+          : String(answer ?? "").trim() !== "";
+        return field?.isRequired && !answered;
+      })
+    );
   };
 
   const constructToSave = () => {
@@ -559,7 +597,14 @@ const PreviewForm = ({
   const onBack = () => {
     const { backSection } = inboundList();
     if (backSection) {
-      setisCompleted((prev) => prev.filter((id) => id !== backSection._id));
+      // Pop the section being returned to off the visited stack. The one
+      // being left was never pushed (that only happens on Next), so a path the
+      // participant backs out of leaves nothing behind — `constructToSave`
+      // submits only the sections on this stack plus the current one.
+      setisCompleted((prev) => {
+        const at = prev.lastIndexOf(backSection._id);
+        return at === -1 ? prev : prev.slice(0, at);
+      });
       setactiveSection(backSection);
     }
   };
@@ -960,13 +1005,9 @@ const PreviewForm = ({
                       border: "1px solid rgba(255, 255, 255, 0.2)",
                       boxShadow: "inset -2px -2px 6px rgba(0, 0, 0, 0.35), inset 2px 2px 6px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(255, 85, 0, 0.4)",
                     }}
-                    onClick={
-                      inboundList() && inboundList().nextSection
-                        ? onNext
-                        : handleSubmit
-                    }
+                    onClick={hasNextStep() ? onNext : handleSubmit}
                   >
-                    {inboundList() && inboundList().nextSection ? (
+                    {hasNextStep() ? (
                       "Next"
                     ) : isMicroLoading ? (
                       <MicroLoading />
