@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
   // Cloudinary and Prisma pull in optional native deps that must not be bundled.
   serverExternalPackages: ["@prisma/client", "bcryptjs", "cloudinary"],
 
+  // The certificate compositor loads its fonts through fontconfig, which file
+  // tracing cannot see, so ship the font folder with every certificate route.
+  outputFileTracingIncludes: {
+    "/api/certificate/**": ["./public/fonts/**"],
+  },
+
   async headers() {
     return [
       {

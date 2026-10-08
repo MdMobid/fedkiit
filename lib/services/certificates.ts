@@ -9,6 +9,7 @@ import { siteUrl } from "@/lib/env";
 import {
   compositeCertificate,
   loadTemplateBuffer,
+  withStudioLayout,
 } from "./certificate-compositor";
 
 /**
@@ -148,7 +149,9 @@ export async function addCertificateTemplate(input: {
     })
     : 0;
 
-  const fields = input.fields as unknown as Prisma.InputJsonValue[];
+  // Saved by the Certificate Studio, so mark the fields to be drawn its way;
+  // unmarked templates keep the old editor's meaning (renderLegacyCertificate).
+  const fields = withStudioLayout(input.fields) as unknown as Prisma.InputJsonValue[];
 
   // If certificates have already been issued with the existing template, preserve it!
   // Create a brand new Certificate template so previously issued certificates (round 1,
