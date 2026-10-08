@@ -42,6 +42,9 @@ export type CertificateField = {
 export async function verifyCertificate(certificateId: string) {
   const id = certificateId?.trim();
   if (!id) throw new ApiError(400, "Certificate ID is required");
+  // Mongo ObjectIds are 24 hex chars; anything else would make Prisma throw
+  // (a 500) rather than simply miss. A mistyped or truncated link is a 404.
+  if (!/^[a-f\d]{24}$/i.test(id)) throw new ApiError(404, "Certificate not found");
 
   // Query strictly by issued certificate ID to prevent template ID collisions
   const issued = await prisma.issuedCertificates.findFirst({
@@ -601,8 +604,14 @@ export async function sendCertificateBatch(input: {
   let mailed = 0;
   const failures: Array<{ email: string; error: string }> = [];
 
-  // Pacing delay (e.g. 150ms between emails to respect Resend rate limits safely)
-  const delayMs = input.frequency && input.frequency > 0 ? Math.max(50, Math.min(1000, Math.round(60000 / input.frequency))) : 150;
+  // Pacing delay between emails, in milliseconds — the Send page labels the
+  // field "Batch delay between emails in milliseconds", so it is read as a
+  // delay rather than a rate. Clamped to 50–1000ms to respect Resend's rate
+  // limits without stalling a 15-recipient chunk; 150ms when unset.
+  const delayMs =
+    input.frequency && input.frequency > 0
+      ? Math.max(50, Math.min(1000, Math.round(input.frequency)))
+      : 150;
 
   // Pre-load template image buffer once to eliminate redundant HTTP downloads for each recipient
   const templateBuffer = await loadTemplateBuffer(template.template);

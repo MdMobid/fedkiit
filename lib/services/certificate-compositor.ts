@@ -1,12 +1,64 @@
 import "server-only";
 
-import { readFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import os from "os";
 import path from "path";
 
 import sharp from "sharp";
 import QRCode from "qrcode";
 import { CertificateField } from "./certificates";
 import { siteUrl } from "@/lib/env";
+
+/**
+ * Points fontconfig at the bundled font before sharp renders any text.
+ *
+ * librsvg ignores `@font-face`, including the data-URI one in buildSvgDefs, so
+ * `font-family: Rubik` is resolved through fontconfig. Vercel's functions ship
+ * with essentially no system fonts, so without this the names would come out
+ * as missing glyphs. fontconfig reads FONTCONFIG_FILE on first use, so this
+ * must run at module load, before the first composite. A deployment that sets
+ * FONTCONFIG_FILE itself is left alone.
+ *
+ * The bundled file is Rubik *Regular* despite its name; the match rule is
+ * fontconfig's standard synthetic-bold rule, so `font-weight="700"` still
+ * renders bold. System fonts stay included as a fallback for other scripts.
+ *
+ * On Windows the native library keeps its own copy of the environment and
+ * never sees this change, so local dev renders in a system font (Segoe UI).
+ * Set FONTCONFIG_FILE before starting the server to preview Rubik there.
+ */
+function configureFontconfig(): void {
+  if (process.env.FONTCONFIG_FILE) return;
+  try {
+    // fontconfig wants forward slashes, Windows included.
+    const slashes = (p: string) => p.split(path.sep).join("/");
+    const fontDir = slashes(path.join(process.cwd(), "public", "fonts"));
+    const configDir = path.join(os.tmpdir(), "fedkiit-fontconfig");
+    mkdirSync(configDir, { recursive: true });
+    const configFile = path.join(configDir, "fonts.conf");
+    writeFileSync(
+      configFile,
+      `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>${escapeXml(fontDir)}</dir>
+  ${process.platform === "win32" ? "<dir>WINDOWSFONTDIR</dir>" : ""}
+  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>
+  <cachedir>${escapeXml(slashes(path.join(configDir, "cache")))}</cachedir>
+  <match target="font">
+    <test name="weight" compare="less_eq"><const>medium</const></test>
+    <test target="pattern" name="weight" compare="more_eq"><const>bold</const></test>
+    <edit name="embolden" mode="assign"><bool>true</bool></edit>
+    <edit name="weight" mode="assign"><const>bold</const></edit>
+  </match>
+</fontconfig>
+`,
+    );
+    process.env.FONTCONFIG_FILE = configFile;
+  } catch (error) {
+    console.warn("[compositor] could not write fontconfig file:", error);
+  }
+}
 
 function escapeXml(unsafe: string): string {
   return unsafe
@@ -16,6 +68,8 @@ function escapeXml(unsafe: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+configureFontconfig();
 
 /**
  * Lazily loads the Rubik Bold TTF as a base64 data URI so librsvg can embed
