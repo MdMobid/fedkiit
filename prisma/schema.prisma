@@ -261,6 +261,9 @@ model issuedCertificates {
 
   event       Event        @relation(fields: [eventId], references: [id])
   Certificate Certificate? @relation(fields: [certificateId], references: [id])
+
+  @@index([eventId, certificateId])
+  @@index([eventId, email])
 }
 
 // ---------------------------------------------------------------------------
