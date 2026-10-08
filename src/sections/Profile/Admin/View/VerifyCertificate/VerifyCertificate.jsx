@@ -22,8 +22,13 @@ const VerifyCertificate = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Get current URL for sharing
-  const currentUrl = window.location.href;
+  const [currentUrl, setCurrentUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
 
   useEffect(() => {
     if (!certificateId) {
@@ -55,8 +60,10 @@ const VerifyCertificate = () => {
           setError("Invalid certificate data.");
         }
       } catch (err) {
-        console.error("Error fetching certificate:", err);
-        setError("Failed to fetch certificate.");
+        const errorMsg =
+          err?.response?.data?.message ||
+          "Certificate not found or has been revoked.";
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -69,7 +76,7 @@ const VerifyCertificate = () => {
     if (certificateData?.imageSrc) {
       const link = document.createElement("a");
       link.href = certificateData.imageSrc;
-      link.download = `Certificate_${certificateData.certificateId}.jpg`;
+      link.download = `Certificate_${certificateData.certificateId}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -77,10 +84,13 @@ const VerifyCertificate = () => {
   };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(currentUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // revert back after 2 seconds
-    });
+    const url = currentUrl || (typeof window !== "undefined" ? window.location.href : "");
+    if (url && navigator?.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // revert back after 2 seconds
+      });
+    }
   };
 
   const openShareModal = () => {
@@ -101,7 +111,17 @@ const VerifyCertificate = () => {
   }
 
   if (error) {
-    return <div className={styles.errorContainer}>{error}</div>;
+    return (
+      <div className={styles.container}>
+        <h1 className={styles.title}>
+          Certificate <span>Verification</span>
+        </h1>
+        <div className={styles.errorContainer}>
+          <div className={styles.errorIcon}>✕</div>
+          <h3>Invalid Certificate ID</h3>
+        </div>
+      </div>
+    );
   }
 
   return (

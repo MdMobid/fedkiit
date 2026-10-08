@@ -68,6 +68,7 @@ const generatedAndSendCertificate = async ({
   attendees,
   subject,
   body,
+  frequency,
   token,
 }) => {
   try {
@@ -86,6 +87,9 @@ const generatedAndSendCertificate = async ({
       {
         eventId,
         recipients,
+        subject,
+        body,
+        frequency,
         resend: true,
       },
       {
@@ -105,7 +109,7 @@ const generatedAndSendCertificate = async ({
   }
 };
 
-const testCertificateSending = async ({ eventId, email, name, subject, token }) => {
+const testCertificateSending = async ({ eventId, email, name, subject, body, token }) => {
   try {
     const response = await api.post(
       "/api/certificate/testCertificateSending",
@@ -114,6 +118,7 @@ const testCertificateSending = async ({ eventId, email, name, subject, token }) 
         email,
         name,
         subject,
+        body,
       },
       {
         headers: { Authorization: `Bearer ${token}` },
