@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
 
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import QRCode from "qrcode";
 import { CertificateField } from "./certificates";
 import { siteUrl } from "@/lib/env";
@@ -44,6 +44,10 @@ function configureFontconfig(): void {
   <dir>${escapeXml(fontDir)}</dir>
   ${process.platform === "win32" ? "<dir>WINDOWSFONTDIR</dir>" : ""}
   <include ignore_missing="yes">/etc/fonts/fonts.conf</include>
+  <alias binding="same">
+    <family>Arial</family>
+    <prefer><family>Liberation Sans</family></prefer>
+  </alias>
   <cachedir>${escapeXml(slashes(path.join(configDir, "cache")))}</cachedir>
   <match target="font">
     <test name="weight" compare="less_eq"><const>medium</const></test>
@@ -166,6 +170,121 @@ export async function loadTemplateBuffer(templateUrl: string): Promise<Buffer | 
  * librsvg renders the real font with Harfbuzz/FreeType — producing the same
  * crisp vector quality as the QR code rather than a pixelated bitmap fallback.
  */
+/**
+ * Marks fields saved by the Certificate Studio. Its coordinates and sizes mean
+ * something different from the editor that issued every certificate before it
+ * (see renderLegacyCertificate), so a template is drawn the studio way only
+ * when its fields carry this marker. addCertificateTemplate stamps it on save.
+ */
+export const STUDIO_LAYOUT = "studio";
+
+export function withStudioLayout<T extends object>(fields: T[]): Array<T & { layout: string }> {
+  return fields.map((field) => ({ ...field, layout: STUDIO_LAYOUT }));
+}
+
+function isStudioLayout(fields: CertificateField[]): boolean {
+  return fields.some((field) => (field as { layout?: unknown }).layout === STUDIO_LAYOUT);
+}
+
+/**
+ * The origin the old backend put in every QR code (its DOMAIN env). Re-using
+ * it makes a re-drawn certificate carry the identical QR to the emailed one.
+ */
+const LEGACY_QR_ORIGIN = "https://www.fedkiit.com/";
+
+/**
+ * Draws a certificate exactly as FED-Backend's sendBatchMails did with
+ * node-canvas, for templates saved before the Certificate Studio — every
+ * certificate issued up to and including the Studio's release.
+ *
+ * - Text: `${fontSize}px Arial`, regular weight, unscaled, centred on x% with
+ *   its *baseline* at y% (canvas's default "alphabetic" baseline). The old
+ *   server's "Arial" was Liberation Sans (fonts-liberation); fontconfig is
+ *   aliased to the same font here.
+ * - QR: 150x150 PNG (margin 1) whose top-left corner sits at the qr field's
+ *   x/y in *pixels*, or 170px in from the bottom-right without one.
+ *
+ * Reading these numbers the studio way scaled the name ~2.5x, made it bold,
+ * centred it vertically and pushed the QR off the page.
+ */
+async function renderLegacyCertificate(
+  imageBuffer: Buffer,
+  fields: CertificateField[],
+  fieldValues: Record<string, string>,
+  qrData: string,
+): Promise<Buffer> {
+  const metadata = await sharp(imageBuffer).metadata();
+  const width = metadata.width || 1200;
+  const height = metadata.height || 850;
+
+  const valueFor = (fieldName: string): string => {
+    const exact = fieldValues[fieldName];
+    if (exact) return String(exact);
+    // A few templates were saved with "Name" or "name " — match those to the
+    // stored "name" rather than drawing nothing.
+    const wanted = fieldName.trim().toLowerCase();
+    const key = Object.keys(fieldValues).find(
+      (k) => !k.startsWith("_") && k.trim().toLowerCase() === wanted,
+    );
+    return key ? String(fieldValues[key] ?? "") : "";
+  };
+
+  let qrX: number | undefined;
+  let qrY: number | undefined;
+  const texts: string[] = [];
+
+  for (const field of fields) {
+    const legacy = field as CertificateField & { fontColor?: string };
+    if (legacy.fieldName === "qr") {
+      qrX = Number(legacy.x);
+      qrY = Number(legacy.y);
+      continue;
+    }
+    const value = valueFor(legacy.fieldName ?? "");
+    if (!value) continue;
+
+    const fontSize = Number(legacy.fontSize ?? 40);
+    const color = legacy.fontColor || "#000000";
+    const x = (Number(legacy.x) / 100) * width;
+    const y = (Number(legacy.y) / 100) * height;
+    texts.push(
+      `<text x="${x}" y="${y}" font-family="Arial, 'Liberation Sans', sans-serif" font-size="${fontSize}" fill="${escapeXml(color)}" text-anchor="middle">${escapeXml(value)}</text>`,
+    );
+  }
+
+  const layers: OverlayOptions[] = [];
+  if (texts.length > 0) {
+    layers.push({
+      input: Buffer.from(
+        `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${texts.join("")}</svg>`,
+      ),
+      top: 0,
+      left: 0,
+    });
+  }
+
+  // `||`, not `??`: the old code fell back on 0 as well as on a missing field.
+  const left = Math.round(qrX || width - 170);
+  const top = Math.round(qrY || height - 170);
+  let qr: Buffer = await QRCode.toBuffer(qrData, { width: 150, margin: 1 });
+  const qrSize = 150;
+  // canvas clipped a QR hanging off the edge; sharp rejects it, so crop first.
+  const visibleLeft = Math.max(0, -left);
+  const visibleTop = Math.max(0, -top);
+  const visibleWidth = Math.min(qrSize, width - left) - visibleLeft;
+  const visibleHeight = Math.min(qrSize, height - top) - visibleTop;
+  if (visibleWidth > 0 && visibleHeight > 0) {
+    if (visibleWidth < qrSize || visibleHeight < qrSize) {
+      qr = await sharp(qr)
+        .extract({ left: visibleLeft, top: visibleTop, width: visibleWidth, height: visibleHeight })
+        .toBuffer();
+    }
+    layers.push({ input: qr, left: left + visibleLeft, top: top + visibleTop });
+  }
+
+  return sharp(imageBuffer).composite(layers).png().toBuffer();
+}
+
 export async function compositeCertificate(params: {
   templateUrl?: string;
   templateBuffer?: Buffer | null;
@@ -186,6 +305,20 @@ export async function compositeCertificate(params: {
     providedBuffer ||
     (templateUrl ? await loadTemplateBuffer(templateUrl) : null);
   if (!imageBuffer) return null;
+
+  if (!isStudioLayout(fields)) {
+    try {
+      const qrData =
+        qrUrl ||
+        (certificateId
+          ? `${LEGACY_QR_ORIGIN}verify/certificate?id=${certificateId}`
+          : `${LEGACY_QR_ORIGIN}test`);
+      return await renderLegacyCertificate(imageBuffer, fields, fieldValues, qrData);
+    } catch (error) {
+      console.error("[compositor] error compositing legacy certificate:", error);
+      return null;
+    }
+  }
 
   try {
     const metadata = await sharp(imageBuffer).metadata();
