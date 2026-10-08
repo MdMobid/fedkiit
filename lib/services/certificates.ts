@@ -540,10 +540,9 @@ export async function sendCertificateEmail(input: {
 <p style="margin:0;font-size:20px;font-weight:700;color:#fff;">FED KIIT</p></td></tr>
 <tr><td style="padding:32px;">
 <h1 style="margin:0 0 14px;font-size:19px;color:#1c1c1c;">Your certificate is ready</h1>
-<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3f3f46;">
+${customBodyHtml || `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3f3f46;">
 Hi ${escape(input.name)}, thank you for taking part in
-<strong>${escape(input.eventName)}</strong>. Your certificate is available below and attached.</p>
-${customBodyHtml}
+<strong>${escape(input.eventName)}</strong>. Your certificate is available below and attached.</p>`}
 ${input.isTest ? `<p style="margin:0;font-size:13px;color:#6b7280;">This is a test email. A certificate is not issued until you use Send Mail.</p>` : `
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr>
 <td style="border-radius:8px;background:#ff8a00;">
