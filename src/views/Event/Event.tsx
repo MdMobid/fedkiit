@@ -13,7 +13,7 @@ import ShareTeamData from "../../features/Modals/Event/ShareModal/ShareTeamData"
 import Link from "next/link";
 import type { FormRecord } from "../../types/form";
 
-const PAST_PREVIEW_COUNT = 4;
+const PAST_PREVIEW_COUNT = 6;
 
 /** Event dates are stored as text; Date parses whatever the admin typed. */
 const eventTime = (event: FormRecord) =>
@@ -171,7 +171,6 @@ const Event = () => {
 
   const openEvents = ongoingEvents.filter((event) => event.info.isPublic);
   const publicPastEvents = pastEvents.filter((event) => event.info.isPublic);
-  const displayedPastEvents = publicPastEvents.slice(0, PAST_PREVIEW_COUNT);
 
   // Registration can stay open on events whose date has already passed, so the
   // spotlight picks the soonest event that is genuinely still ahead of us and
@@ -182,6 +181,9 @@ const Event = () => {
 
   const spotlight = upcoming[0] || openEvents[0];
   const remainingOpen = openEvents.filter((event) => event.id !== spotlight?.id);
+
+  // Show up to the latest 6 past events in the preview
+  const displayedPastEvents = publicPastEvents.slice(0, PAST_PREVIEW_COUNT);
 
   // Spelling out how far away the event is makes "upcoming" concrete in a way
   // that a bare date never does.
@@ -220,7 +222,7 @@ const Event = () => {
 
       <main className={style.page}>
         <div className={style.shell}>
-        
+
 
           {isLoading ? (
             <>
@@ -274,7 +276,7 @@ const Event = () => {
                 </aside>
               )}
 
-              {spotlight ? (
+              {spotlight && (
                 <section className={style.group}>
                   <div className={style.groupHead}>
                     <h2 className={style.groupTitle}>
@@ -287,26 +289,12 @@ const Event = () => {
                   <EventCard
                     key={spotlight.id}
                     data={spotlight}
-                    onOpen={() => {}}
+                    onOpen={() => { }}
                     type="ongoing"
                     variant="featured"
                     isLoading={false}
                     eventName={prerequisiteTitleOf(spotlight)}
                   />
-                </section>
-              ) : (
-                <section className={style.group}>
-                  <div className={style.groupHead}>
-                    <h2 className={style.groupTitle}>Open for registration</h2>
-                  </div>
-                  <div className={style.state}>
-                    <NoEventsArt className={style.stateArt} />
-                    <h3 className={style.stateTitle}>Nothing open right now</h3>
-                    <p className={style.stateBody}>
-                      New events are announced here. Browse what we&rsquo;ve run
-                      before in the meantime.
-                    </p>
-                  </div>
                 </section>
               )}
 
@@ -321,7 +309,7 @@ const Event = () => {
                       <EventCard
                         key={event.id}
                         data={event}
-                        onOpen={() => {}}
+                        onOpen={() => { }}
                         type="ongoing"
                         isLoading={false}
                         eventName={prerequisiteTitleOf(event)}
@@ -331,12 +319,14 @@ const Event = () => {
                 </Disclosure>
               )}
 
-              {displayedPastEvents.length > 0 && (
+              {displayedPastEvents.length > 0 ? (
                 <Disclosure
+                  key={spotlight ? "past-collapsed" : "past-expanded"}
                   title="Past events"
                   count={publicPastEvents.length}
+                  defaultOpen={!spotlight}
                   action={
-                    publicPastEvents.length > PAST_PREVIEW_COUNT ? (
+                    publicPastEvents.length > displayedPastEvents.length ? (
                       <Link href="/Events/pastEvents" className={style.groupLink}>
                         View all
                       </Link>
@@ -348,13 +338,23 @@ const Event = () => {
                       <EventCard
                         key={event.id}
                         data={event}
-                        onOpen={() => {}}
+                        onOpen={() => { }}
                         type="past"
                         isLoading={false}
                       />
                     ))}
                   </div>
                 </Disclosure>
+              ) : (
+                !spotlight && (
+                  <div className={style.state}>
+                    <NoEventsArt className={style.stateArt} />
+                    <h3 className={style.stateTitle}>No events yet</h3>
+                    <p className={style.stateBody}>
+                      New events will appear here once announced.
+                    </p>
+                  </div>
+                )
               )}
             </>
           )}

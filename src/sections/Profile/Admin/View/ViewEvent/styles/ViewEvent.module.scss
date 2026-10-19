@@ -68,25 +68,30 @@
 .eventSectionContainer {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .eventSection {
   display: flex;
   flex-direction: column;
-  margin: 0 4rem 2rem 4rem;
+  margin: 0 2rem 2rem 2rem;
 }
 
 .eventGrid {
   display: grid;
   width: 100%;
-  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 .eventCardContainer {
-  margin-bottom: 1rem;
+  width: 100%;
   position: relative;
-  max-width: 24rem;
 }
 
 .eventList::-webkit-scrollbar {
@@ -117,18 +122,23 @@
   .topSection {
     flex-direction: column;
   }
+
   .topSectionInputContainer:nth-child(1) {
     margin-right: 0;
   }
+
   .EventInput {
     width: 100%;
   }
+
   .EventInputArea {
     width: 100%;
   }
+
   .posterPreview {
     width: 100%;
   }
+
   .buttonContainer {
     display: none;
   }
