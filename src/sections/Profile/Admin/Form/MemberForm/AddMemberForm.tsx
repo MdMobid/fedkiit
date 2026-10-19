@@ -3,17 +3,17 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import styles from "./styles/AddMemberForm.module.scss";
-import { Button, Input } from "../../../../../components";
+import { Input } from "../../../../../components";
 import AuthContext from "../../../../../context/AuthContext";
 import { api } from "../../../../../services";
 import { EditImage } from "../../../../../features";
 import {
   ComponentLoading,
   MicroLoading,
+  Alert,
 } from "../../../../../microInteraction";
 import type { ApiError } from "@/src/types/api";
 import type { MemberExtra } from "@/src/types/member";
-// import {api} from "../../../../../services"
 
 type MemberDraft = {
   name: string;
@@ -30,7 +30,12 @@ type MemberDraft = {
   know: string;
 };
 
-function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
+type AddMemberFormProps = {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+};
+
+function AddMemberForm({ onSuccess, onCancel }: AddMemberFormProps) {
   const authCtx = useContext(AuthContext);
   const [data, setData] = useState<MemberDraft>({
     name: "",
@@ -191,7 +196,12 @@ function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
         const message =
           response.data?.message ||
           (isUpdating ? "Member Updated Successfully" : "Member Added Successfully");
-        alert(message);
+        Alert({
+          type: "success",
+          message,
+          position: "bottom-right",
+          duration: 3000,
+        });
         if (onSuccess) {
           onSuccess();
         }
@@ -199,13 +209,23 @@ function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
         console.error("Error adding/updating member:", error);
         const errorMsg =
           (error as ApiError)?.response?.data?.message ||
-          "Failed to add member. Please try again.";
-        alert(errorMsg);
+          "Failed to save member. Please try again.";
+        Alert({
+          type: "error",
+          message: errorMsg,
+          position: "bottom-right",
+          duration: 4000,
+        });
       } finally {
         setIsMicroLoading(false);
       }
     } else {
-      alert("Please fill all the required fields (Email and Access)");
+      Alert({
+        type: "error",
+        message: "Please fill all the required fields (Email and Access)",
+        position: "bottom-right",
+        duration: 4000,
+      });
     }
   };
 
@@ -298,7 +318,7 @@ function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
               closeModal={closeModal}
               setimgprv={updateImagePreview} // Pass the updated function
               fileName={selectedFileName}
-              // setImgFile={setCroppedFile}
+            // setImgFile={setCroppedFile}
             />
           )}
 
@@ -369,8 +389,13 @@ function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
           containerStyle={{ width: "100%" }}
         />
       </div>
-      <div className={styles.formHead}>
-        <Button onClick={onAddOrUpdateMember}>
+      <div className={styles.formActions}>
+        <button
+          type="button"
+          className={styles.submitButton}
+          onClick={onAddOrUpdateMember}
+          disabled={isMicroLoading}
+        >
           {isMicroLoading ? (
             <MicroLoading />
           ) : authCtx.memberData ? (
@@ -378,7 +403,17 @@ function AddMemberForm({ onSuccess }: { onSuccess?: () => void }) {
           ) : (
             "Add Member"
           )}
-        </Button>
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            className={styles.cancelButton}
+            onClick={onCancel}
+            disabled={isMicroLoading}
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </div>
   );
