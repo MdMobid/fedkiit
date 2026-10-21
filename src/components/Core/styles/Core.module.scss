@@ -147,30 +147,38 @@
   color: #fff;
   position: relative;
   width: auto;
+  height: 40px;
+  box-sizing: border-box;
 }
+
 .input:hover {
   border: 1px solid #fff !important;
   transition: 0.3s ease-in-out;
 }
 
 .inputTxtArea {
+  height: auto;
   min-height: 185px;
   width: 380px;
   resize: none;
 }
+
 .inputSelect {
   color: #fff;
   width: 380px !important;
 }
+
 .inputSelect option {
   color: black;
 }
+
 .inputDate {
   padding: 6px !important;
   width: auto !important;
   height: 40px !important;
   position: relative;
 }
+
 // Both halves of this selector list must be :global(). The automated pass that
 // wrapped impure selectors worked line by line, so it only caught the part on
 // the line that opened the block and left the first half scoped — which meant
@@ -194,6 +202,7 @@
  * unchanged. `!important` matches the existing declarations in this file, which
  * already use it and would otherwise win. */
 @media (max-width: 768px) {
+
   .input,
   .inputTxtArea,
   .inputSelect,

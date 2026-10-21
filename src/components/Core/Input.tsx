@@ -72,12 +72,12 @@ export type SelectOption = {
 type ChangeFor<T extends string> = T extends "select"
   ? SelectOption["value"]
   : T extends "date"
-    ? Parameters<NonNullable<DatePickerProps["onChange"]>>[0]
-    : T extends "datetime-local"
-      ? Date | null
-      : T extends "file" | "image"
-        ? { target: { value: File } }
-        : ChangeEvent<HTMLInputElement & HTMLTextAreaElement>;
+  ? Parameters<NonNullable<DatePickerProps["onChange"]>>[0]
+  : T extends "datetime-local"
+  ? Date | null
+  : T extends "file" | "image"
+  ? { target: { value: File } }
+  : ChangeEvent<HTMLInputElement & HTMLTextAreaElement>;
 
 /**
  * What `onChange` receives for each `type`. When the type is only known at
@@ -110,84 +110,173 @@ export type InputProps<T extends string = "text"> = {
   [key: string]: unknown;
 };
 
-const customStyles: StylesConfig<SelectOption, false> = {
-  control: (provided) => ({
+const getCustomStyles = (
+  style?: CSSProperties
+): StylesConfig<SelectOption, false> => ({
+  container: (provided) => ({
     ...provided,
-    display: "flex",
-    outline: "none",
-    width: "99.5%",
-    fontSize: "12px",
-    backgroundColor: "transparent",
-    borderRadius: "4px",
-    color: "#fff",
-    marginBottom: "0",
-    maxHeight: "40px",
-    marginLeft: "8px",
-    marginRight: "8px",
-    marginTop: "4px",
-    position: "relative",
-    border: "1px solid rgba(211, 211, 211, 0.5)",
-    boxShadow: "none",
-    "&:hover": {
-      borderColor: "#fff !important",
-    },
+    width: style?.width !== undefined ? (style.width as string) : "100%",
+    border: "none",
+    background: "transparent",
+    padding: 0,
   }),
-  menu: (provided) => ({
-    ...provided,
-    width: "99.5%",
-    marginLeft: "8px",
-  }),
-  menuPortal: (provided) => ({ ...provided, zIndex: 111 }),
-  placeholder: (provided) => ({
+  control: (provided, state) => ({
     ...provided,
     display: "flex",
     alignItems: "center",
-    marginTop: "-7px",
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    color: state.isSelected ? "#FF8A00" : "#2D2D2D",
-    backgroundColor: state.isSelected ? "#2D2D2D" : "#fff",
-    cursor: "pointer",
-    width: "99%",
-    border: "none",
-    margin: "0 auto",
-    borderRadius: "4px",
+    outline: "none",
+    width: "100%",
+    fontSize: (style?.fontSize as string) || "12px",
+    backgroundColor: (style?.backgroundColor as string) || "transparent",
+    borderRadius: (style?.borderRadius as string) || "4px",
+    color: "#fff",
+    height: (style?.height as string) || "40px",
+    minHeight: (style?.height as string) || "40px",
+    margin: style?.margin !== undefined ? (style.margin as string) : "6px",
+    marginBottom:
+      style?.marginBottom !== undefined
+        ? (style.marginBottom as string)
+        : style?.margin !== undefined
+          ? (style.margin as string)
+          : "10px",
+    position: "relative",
+    border: state.isFocused
+      ? "1px solid #fff !important"
+      : (style?.border as string) ||
+      "1px solid rgba(211, 211, 211, 0.5) !important",
+    boxShadow: "none",
+    boxSizing: "border-box",
     "&:hover": {
-      transition: "ease-in-out 0.3s",
-      backgroundColor: "#2D2D2D",
-      color: "#FF8A00",
-      margin: "2px auto",
+      borderColor: "#fff !important",
+      transition: "0.3s ease-in-out",
     },
-    "&:active": {
-      backgroundColor: "#2D2D2D",
-      color: "#FF8A00",
+    "@media (max-width: 768px)": {
+      fontSize: "16px !important",
+      minHeight: style?.height ? (style.height as string) : "44px",
+      height: style?.height ? (style.height as string) : "44px",
+      margin:
+        style?.margin !== undefined
+          ? (style.margin as string)
+          : "0px 0px 10px 0px",
+      marginBottom:
+        style?.marginBottom !== undefined
+          ? (style.marginBottom as string)
+          : "10px",
     },
   }),
-  indicatorSeparator: (provided) => ({
+  valueContainer: (provided) => ({
     ...provided,
-    display: "none",
+    padding: "0 10px",
+    height: "100%",
+    minHeight: "38px",
+    display: "flex",
+    alignItems: "center",
+  }),
+  placeholder: (provided) => ({
+    ...provided,
+    color: "rgba(255, 255, 255, 0.5)",
+    margin: 0,
+    fontSize: (style?.fontSize as string) || "12px",
+    "@media (max-width: 768px)": {
+      fontSize: "16px !important",
+    },
   }),
   singleValue: (provided) => ({
     ...provided,
     color: "#fff",
+    margin: 0,
+    fontSize: (style?.fontSize as string) || "12px",
     display: "flex",
     alignItems: "center",
-    marginTop: "-7px",
-    fontSize:"larger"
+    "@media (max-width: 768px)": {
+      fontSize: "16px !important",
+    },
   }),
-};
+  input: (provided) => ({
+    ...provided,
+    margin: 0,
+    padding: 0,
+    color: "#fff",
+  }),
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    height: "100%",
+    minHeight: "38px",
+  }),
+  menu: (provided) => ({
+    ...provided,
+    backgroundColor: "#18181b",
+    border: "1px solid rgba(255, 255, 255, 0.15)",
+    borderRadius: (style?.borderRadius as string) || "8px",
+    boxShadow: "0 12px 36px rgba(0, 0, 0, 0.7)",
+    zIndex: 9999,
+    marginLeft:
+      style?.margin !== undefined
+        ? style.margin === "0px" || style.margin === 0 || style.margin === "0"
+          ? "0px"
+          : (style.margin as string)
+        : "6px",
+    width:
+      style?.margin !== undefined &&
+        (style.margin === "0px" || style.margin === "0" || style.margin === 0)
+        ? "100%"
+        : "calc(100% - 12px)",
+    "@media (max-width: 768px)": {
+      marginLeft:
+        style?.margin !== undefined &&
+          style.margin !== "0px" &&
+          style.margin !== 0
+          ? (style.margin as string)
+          : "0px",
+      width:
+        style?.margin !== undefined &&
+          style.margin !== "0px" &&
+          style.margin !== 0
+          ? "calc(100% - 12px)"
+          : "100%",
+    },
+  }),
+  menuPortal: (provided) => ({ ...provided, zIndex: 9999 }),
+  option: (provided, state) => ({
+    ...provided,
+    color: state.isSelected ? "#FF8A00" : "#fff",
+    backgroundColor: state.isSelected
+      ? "rgba(255, 138, 0, 0.15)"
+      : state.isFocused
+        ? "rgba(255, 255, 255, 0.08)"
+        : "transparent",
+    cursor: "pointer",
+    fontSize: (style?.fontSize as string) || "14px",
+    borderRadius: "6px",
+    margin: "2px 4px",
+    width: "auto",
+    "&:hover": {
+      backgroundColor: "rgba(255, 138, 0, 0.2)",
+      color: "#FF8A00",
+      transition: "ease-in-out 0.2s",
+    },
+    "&:active": {
+      backgroundColor: "rgba(255, 138, 0, 0.3)",
+      color: "#FF8A00",
+    },
+  }),
+  indicatorSeparator: () => ({
+    display: "none",
+  }),
+});
 
 const DropdownIndicator = (props: DropdownIndicatorProps<SelectOption, false>) => {
   return (
     <components.DropdownIndicator {...props}>
       <AiOutlineDown
         color="#fff"
-        size={20}
+        size={18}
         style={{
           position: "absolute",
           right: "12px",
-          top: "25%",
+          top: "50%",
+          transform: "translateY(-50%)",
+          pointerEvents: "none",
         }}
       />
     </components.DropdownIndicator>
@@ -284,27 +373,25 @@ function Input<T extends string = "text">(props: InputProps<T>) {
 
       case "select":
         return (
-          <div>
-            <Select
-              name={name}
-              placeholder={placeholder}
-              value={
-                isControlled
-                  ? options!.find((option) => option.value === value) || null
-                  : undefined
-              }
-              options={options}
-              onChange={(selectedOption) => emitChange(selectedOption!.value)}
-              styles={customStyles}
-              components={{ DropdownIndicator }}
-              isSearchable={false}
-              className={className}
-              // react-select only distinguishes "fixed"; the "auto" this
-              // passed before was handled exactly like the "absolute" default.
-              menuPosition="absolute"
-              {...rest}
-            />
-          </div>
+          <Select
+            name={name}
+            placeholder={placeholder}
+            value={
+              isControlled
+                ? options!.find((option) => option.value === value) || null
+                : undefined
+            }
+            options={options}
+            onChange={(selectedOption) => emitChange(selectedOption!.value)}
+            styles={getCustomStyles(style)}
+            components={{ DropdownIndicator }}
+            isSearchable={false}
+            className={className}
+            // react-select only distinguishes "fixed"; the "auto" this
+            // passed before was handled exactly like the "absolute" default.
+            menuPosition="absolute"
+            {...rest}
+          />
         );
 
       case "date":
@@ -409,7 +496,7 @@ function Input<T extends string = "text">(props: InputProps<T>) {
                 name={name}
                 maxLength={rest.maxLength || 20}
                 max={rest.max || 20}
-                className={styles.input}
+                className={`${styles.input}${className ? ` ${className}` : ""}`}
                 type={showPassword ? "text" : "password"}
                 style={style || {}}
                 placeholder={placeholder}
@@ -564,7 +651,7 @@ function Input<T extends string = "text">(props: InputProps<T>) {
         return (
           <input
             name={name}
-            className={styles.input}
+            className={`${styles.input}${className ? ` ${className}` : ""}`}
             type={type}
             style={style || {}}
             placeholder={placeholder}
@@ -581,17 +668,21 @@ function Input<T extends string = "text">(props: InputProps<T>) {
       className={`${styles.containerInput} ${containerClassName}`}
       style={
         containerStyle || {
-          marginTop: type === "select" ? "0" : "8px",
+          marginTop: "8px",
         }
       }
     >
-      {showLabel && (
+      {showLabel && label && (
         <label
           style={{
             color: "#fff",
             marginBottom: "4px",
             fontSize: ".8em",
-            marginLeft: "8px",
+            marginLeft:
+              style?.margin !== undefined &&
+              (style.margin === "0px" || style.margin === "0" || style.margin === 0)
+                ? "0px"
+                : "6px",
           }}
           htmlFor={label}
         >
