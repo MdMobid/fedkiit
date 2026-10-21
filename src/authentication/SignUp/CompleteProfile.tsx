@@ -136,7 +136,7 @@ function CompleteProfile() {
           router.push(postAuthRedirect("/"));
         }, 3000);
 
-        
+
       } else {
         setAlert({
           type: "error",
@@ -191,7 +191,8 @@ function CompleteProfile() {
               name="rollNumber"
               onChange={(e) => setUser((prev) => ({ ...prev, [e.target.name]: e.target.value }))}
               required
-              style={{ width: "100%" }}
+              containerStyle={{ marginTop: "4px" }}
+              style={{ width: "100%", margin: "0px" }}
               error={errors.rollNumber}
             />
 
@@ -206,7 +207,8 @@ function CompleteProfile() {
               value={year}
               onChange={(value) => setYear(value)}
               required
-              style={{ width: "100%" }}
+              containerStyle={{ marginTop: "4px" }}
+              style={{ width: "100%", margin: "0px" }}
               error={errors.year}
             />
 
@@ -217,7 +219,8 @@ function CompleteProfile() {
               name="school"
               onChange={(e) => setUser((prev) => ({ ...prev, [e.target.name]: e.target.value }))}
               required
-              style={{ width: "100%" }}
+              containerStyle={{ marginTop: "4px" }}
+              style={{ width: "100%", margin: "0px" }}
               error={errors.school}
             />
 
@@ -235,7 +238,8 @@ function CompleteProfile() {
               value={showUser.college}
               onChange={(value) => setUser((prev) => ({ ...prev, college: value }))}
               required
-              style={{ width: "96%" }}
+              containerStyle={{ marginTop: "4px" }}
+              style={{ width: "100%", margin: "0px" }}
               error={errors.college}
             />
 
@@ -246,26 +250,26 @@ function CompleteProfile() {
               name="contactNo"
               onChange={(e) => setUser((prev) => ({ ...prev, [e.target.name]: e.target.value }))}
               required
-              style={{ width: "100%" }}
+              containerStyle={{ marginTop: "4px" }}
+              style={{ width: "100%", margin: "0px" }}
               error={errors.contactNo}
             />
 
-            <div style={{ marginLeft: "8px" }}>
-              <Button
-                style={{
-                  width: "102%",
-                  background: "var(--primary)",
-                  color: "#fff",
-                  height: "40px",
-                  marginTop: "20px",
-                  fontSize: "1rem",
-                  cursor: "pointer",
-                }}
-                type="submit"
-              >
-                {isLoading ? <MicroLoading /> : "Create Profile"}
-              </Button>
-            </div>
+            <Button
+              style={{
+                width: "100%",
+                background: "var(--primary)",
+                color: "#fff",
+                height: "40px",
+                marginTop: "20px",
+                fontSize: "1rem",
+                cursor: "pointer",
+              }}
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? <MicroLoading /> : "Create Profile"}
+            </Button>
           </form>
         </div>
       </div>

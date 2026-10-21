@@ -1,185 +1,103 @@
+// Clean, polished auth page matching Login and SignUp.
+
 .mDiv {
-  position: fixed;
-
   width: 100%;
-  height: 100%;
-  z-index: 10;
-  left: 0;
-  top: 0;
-
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
 }
 
 .mDivCon {
-  position: absolute;
-  top: 0;
-  left: 0;
+  width: 100%;
   display: flex;
-  z-index: 5;
-
   justify-content: center;
-
-  width: 100%;
-  height: 100%;
-
 }
 
-.circle {
-  height: 25rem;
-  width: 25rem;
-  background-color: rgba(255, 92, 0, 0.19);
-  filter: blur(100px);
-  position: absolute;
-  top: 20%;
-  left: -12%;
-  border-radius: 50%;
-  overflow: hidden;
-  z-index: 0;
-}
-
-
+.circle,
 .circle1 {
-  height: 25rem;
-  width: 25rem;
-  background-color: rgba(255, 92, 0, 0.19);
-  position: absolute;
-
-  top: 5%;
-  right: -5%;
-  border-radius: 50%;
-  filter: blur(100px);
-}
-
-.ArrowBackIcon {
-  position: absolute;
-  top: 5%;
-  left: 30px;
-  color: #fff;
-  cursor: pointer;
-}
-
-#showCreate {
-  width: 100%;
-  display: block;
-}
-
-#hideCreate {
-  width: 0;
   display: none;
 }
 
+.ArrowBackIcon {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #181818;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s ease;
 
+  &:hover {
+    background: rgba(255, 77, 38, 0.15);
+    border-color: rgba(255, 77, 38, 0.3);
+    color: #ff4d26;
+  }
+}
 
-.CreateProfile,
-.Please {
-  font-family: "Mulish", sans-serif;
-  text-align: center;
+.BackGround {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
 }
 
 .CreateProfile {
   font-size: 1.5rem;
   font-weight: 700;
-  padding:5px;
+  text-align: center;
 }
 
 .Please {
-
-  font-size: 1rem;
-  font-weight: 300;
-}
-
-.BackGround {
-  flex-direction: column;
-  margin: auto;
-  height: 92%;
-  margin-top:3%;
-  background: linear-gradient(
-    90deg,
-    rgba(32, 32, 32, 0.95) -11.52%,
-    rgba(37, 37, 37, 0.95) 106.29%
-  );
-  border: 1px solid #ffffff61;
-  border-radius: 10px;
-  padding: 10px;
-  padding-bottom: 10px;
-  width: 34vw;
-  display: flex;
+  font-size: 0.9rem;
+  color: #a1a1aa;
+  text-align: center;
+  margin-top: 4px;
+  margin-bottom: 12px;
 }
 
 .FormTag {
-  width: 96%;
+  width: 100%;
   display: flex;
   flex-direction: column;
-
 }
 
 @media (max-width: 500px) {
+  .mDiv {
+    align-items: flex-start;
+    padding: 4.5rem 1rem 2rem 1rem;
+  }
+
   .BackGround {
-    width: 80vw;
-    padding-bottom: 20px;
+    width: 100%;
+    max-width: none;
+    padding: 1.5rem 1.25rem;
+    border-radius: 16px;
   }
 
-  .CreateProfile {
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .Please {
-    margin: 10px 0px;
-    font-size: 12.5px;
-    font-weight: 300;
-  }
-}
-
-@media (max-width: 900px) {
-  .BackGround {
-    width: 60vw;
-    padding-bottom: 20px;
-  }
-
-  .CreateProfile {
-    font-size: 30px;
-    font-weight: 600;
-  }
-
-  .Please {
-    margin: 10px 0px;
-    font-size: 15.5px;
-    font-weight: 300;
-  }
-}
-
-@media (max-width: 500px) {
-  .BackGround {
-    width: 80vw;
-    padding-bottom: 20px;
-  }
-
-  .CreateProfile {
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .Please {
-    margin: 10px 0px;
-    font-size: 12.5px;
-    font-weight: 300;
-  }
-}
-
-@media (max-width: 900px) and (min-width: 501px) {
-  .BackGround {
-    width: 60vw;
-    padding-bottom: 20px;
-  }
-
-  .CreateProfile {
-    font-size: 30px;
-    font-weight: 600;
-  }
-
-  .Please {
-    margin: 10px 0px;
-    font-size: 15.5px;
-    font-weight: 300;
+  .ArrowBackIcon {
+    top: 1rem;
+    left: 1rem;
+    width: 36px;
+    height: 36px;
   }
 }

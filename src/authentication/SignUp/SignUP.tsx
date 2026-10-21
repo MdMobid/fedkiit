@@ -208,7 +208,7 @@ const SignUp = () => {
       );
 
       if (response.status === 200 || response.status === 201) {
-  
+
         setTimeout(() => {
           setShowModal(true);
         }, 3000);
@@ -251,7 +251,7 @@ const SignUp = () => {
 
         if (response.status == 200 || response.status == 201) {
           // setLoad(false);
-          localStorage.setItem("token",response.data.token);
+          localStorage.setItem("token", response.data.token);
           // console.log(response);
           authCtx.login(
             response.data.user.name,
@@ -309,188 +309,224 @@ const SignUp = () => {
   // console.log(alert)
 
   return (
-    <>
-      <div style={{ width: "100vw" }}>
-        <Link href={"/"}>
-          <div className={styles.ArrowBackIcon}>
-            <ArrowBackIcon />
-          </div>
-        </Link>
+    <div className={styles.page}>
+      <Link href={"/"}>
+        <div className={styles.ArrowBackIcon}>
+          <ArrowBackIcon />
+        </div>
+      </Link>
+      <div className={styles.circle}>
+        <div></div>
+      </div>
+      <div className={styles.circle1}></div>
 
-        <div className={styles.circle}></div>
+      <div className={styles.container}>
+        <div className={styles.signin}>
+          <h1
+            style={{
+              paddingTop: "10px",
+              background: "var(--primary)",
+              width: "max-content",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            Sign Up
+          </h1>
 
-        <div className={styles.circle1}></div>
-        <div
-          className={styles.container}
-          style={{
-            zIndex: "10",
-          }}
-        >
-          <div className={styles.signin}>
-            <h1>
-              SignUp
-            </h1>
-            <GoogleSignup setAlert={setAlert} />
-            {isGoogleOAuthEnabled() ? (
-              <div
+          <GoogleSignup setAlert={setAlert} />
+
+          {isGoogleOAuthEnabled() ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "1rem",
+                marginTop: "10px",
+                marginBottom: "4px",
+              }}
+            >
+              <div className={styles.divider} />
+              <p
                 style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  margin: "8 px 0 4px 0",
+                  color: "#fff",
+                  textAlign: "center",
+                  marginBottom: "0.2rem",
                 }}
               >
-                <div />
-                <p style={{ color: "#fff", textAlign: "center" }}>or</p>
-                <div />
+                or
+              </p>
+              <div className={styles.divider} />
+            </div>
+          ) : null}
+
+          <form onSubmit={handleSignUp}>
+            <div className={styles.formGrid}>
+              {/* First Name */}
+              <div>
+                <Input
+                  type="text"
+                  placeholder="First Name"
+                  label="First Name"
+                  name="FirstName"
+                  value={showUser.FirstName}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
               </div>
-            ) : null}
-            <form onSubmit={handleSignUp}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="text"
-                    placeholder="First Name"
-                    label="First Name"
-                    name="FirstName"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="text"
-                    placeholder="Last Name"
-                    label="Last Name"
-                    name="LastName"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
+
+              {/* Last Name */}
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Last Name"
+                  label="Last Name"
+                  name="LastName"
+                  value={showUser.LastName}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="email"
-                    placeholder="eg.-myemail@gmail.com"
-                    label="Email"
-                    name="email"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="number"
-                    placeholder="1234567890"
-                    label="Mobile"
-                    name="contactNo"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
+
+              {/* Email */}
+              <div>
+                <Input
+                  type="email"
+                  placeholder="eg.-myemail@gmail.com"
+                  label="Email"
+                  name="email"
+                  value={showUser.email}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "2%",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ width: "46%" }}>
-                  <Input
-                    type="text"
-                    placeholder="College Name"
-                    label="college"
-                    name="college"
-                    value={showUser.college}
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                  {showDropdown && (
-                    <div className={styles.dropdown}>
-                      <div
-                        className={styles.dropdownItem}
-                        onClick={handleSelectCollege}
-                      >
-                        Kalinga Institute of Industrial Technology
-                      </div>
+
+              {/* Mobile */}
+              <div>
+                <Input
+                  type="number"
+                  placeholder="1234567890"
+                  label="Mobile"
+                  name="contactNo"
+                  value={showUser.contactNo}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+              </div>
+
+              {/* College */}
+              <div className={styles.collegeWrapper}>
+                <Input
+                  type="text"
+                  placeholder="College Name"
+                  label="College"
+                  name="college"
+                  value={showUser.college}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+                {showDropdown && (
+                  <div className={styles.dropdown}>
+                    <div
+                      className={styles.dropdownItem}
+                      onClick={handleSelectCollege}
+                    >
+                      Kalinga Institute of Industrial Technology
                     </div>
-                  )}
-                </div>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="text"
-                    placeholder="School"
-                    label="School"
-                    name="school"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
+                  </div>
+                )}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ width: "46%" }}>
-                  {/* Chosen, not derived from the roll number: a lateral-entry
-                      student admitted in 2025 is in 2nd year with the 2024
-                      batch. */}
-                  <Input
-                    type="select"
-                    placeholder="Select year"
-                    label="Year"
-                    name="year"
-                    options={YEAR_OPTIONS}
-                    value={showUser.year}
-                    onChange={(value) => DataInp("year", value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
-                <div style={{ width: "48%" }}>
-                  <Input
-                    type="text"
-                    placeholder="Roll Number"
-                    label="Roll Number"
-                    name="rollNumber"
-                    onChange={(e) => DataInp(e.target.name, e.target.value)}
-                    required
-                    style={{ width: "96%" }}
-                  />
-                </div>
-              </div>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                label="Password"
-                name="Password"
-                onChange={(e) => DataInp(e.target.name, e.target.value)}
-                required
-                style={{ width: "98%" }}
-              />
 
+              {/* School */}
+              <div>
+                <Input
+                  type="text"
+                  placeholder="School (e.g. CSE)"
+                  label="School"
+                  name="school"
+                  value={showUser.school}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+              </div>
+
+              {/* Year */}
+              <div>
+                <Input
+                  type="select"
+                  placeholder="Select year"
+                  label="Year"
+                  name="year"
+                  options={YEAR_OPTIONS}
+                  value={showUser.year}
+                  onChange={(value) => DataInp("year", value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+              </div>
+
+              {/* Roll Number */}
+              <div>
+                <Input
+                  type="text"
+                  placeholder="Roll Number"
+                  label="Roll Number"
+                  name="rollNumber"
+                  value={showUser.rollNumber}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+              </div>
+
+              {/* Password */}
+              <div className={styles.fullWidth}>
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  label="Password"
+                  name="Password"
+                  value={showUser.Password}
+                  onChange={(e) => DataInp(e.target.name, e.target.value)}
+                  required
+                  containerStyle={{ marginTop: "4px" }}
+                  style={{ width: "100%", margin: "0px" }}
+                />
+              </div>
+
+              {/* Terms and conditions */}
               <div
                 style={{
                   display: "flex",
-                  marginTop: "15px",
-                  marginLeft: "5px",
+                  alignItems: "center",
+                  marginTop: "10px",
+                  marginLeft: "4px",
+                  gridColumn: "1 / -1",
                 }}
               >
                 <input
                   type="checkbox"
-                  style={{ height: "17px", width: "17px", cursor: "pointer" }}
+                  style={{
+                    height: "16px",
+                    width: "16px",
+                    cursor: "pointer",
+                    accentColor: "#ff8a00",
+                  }}
                   checked={isTandChecked}
                   onChange={handleCheckBox}
                   id="custom-checkbox"
@@ -499,38 +535,35 @@ const SignUp = () => {
                 <Text
                   style={{
                     fontSize: "0.774rem",
-                    marginLeft: "5px",
-                    textAlign: "center",
+                    marginLeft: "8px",
                   }}
                 >
-                  Agree to FED's
+                  Agree to FED's{" "}
                   <Link
                     href="/TermsAndConditions"
                     style={{
                       background: "var(--primary)",
                       WebkitBackgroundClip: "text",
                       color: "transparent",
-                      marginLeft: "7px",
-                      marginRight: "7px",
                     }}
                   >
                     Terms and Conditions
-                  </Link>
-                  And
+                  </Link>{" "}
+                  and{" "}
                   <Link
                     href="/PrivacyPolicy"
                     style={{
                       background: "var(--primary)",
                       WebkitBackgroundClip: "text",
                       color: "transparent",
-                      marginLeft: "7px",
                     }}
                   >
-                    FED's Privacy Policy.
-                  </Link>
+                    Privacy Policy
+                  </Link>.
                 </Text>
               </div>
 
+              {/* Submit button */}
               <Button
                 type="submit"
                 style={{
@@ -538,23 +571,26 @@ const SignUp = () => {
                   background: "var(--primary)",
                   color: "#fff",
                   height: "40px",
-                  marginTop: "20px",
+                  marginTop: "16px",
                   fontSize: "1rem",
                   cursor: "pointer",
-                  // border: "1px solid #fff",
+                  gridColumn: "1 / -1",
                 }}
                 disabled={isLoading}
               >
                 {isLoading ? <MicroLoading /> : "Sign Up"}
               </Button>
+
+              {/* Login link */}
               <Text
                 style={{
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
                   textAlign: "center",
                   marginTop: "14px",
+                  gridColumn: "1 / -1",
                 }}
               >
-                Already Have an account?{" "}
+                Already have an account?{" "}
                 <Link
                   href="/Login"
                   style={{
@@ -566,9 +602,8 @@ const SignUp = () => {
                   Login
                 </Link>
               </Text>
-            </form>
-          </div>
-          <div className={styles.sideImage}></div>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -579,7 +614,7 @@ const SignUp = () => {
         />
       )}
       <Alert />
-    </>
+    </div>
   );
 };
 
