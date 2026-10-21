@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ShieldAlert } from "lucide-react";
 
 import { api } from "../../../../../services";
 import { ComponentLoading } from "../../../../../microInteraction";
@@ -80,7 +80,7 @@ const VerifyCertificate = () => {
 
         setError(
           (err as ApiError)?.response?.data?.message ||
-            "Certificate not found or has been revoked."
+          "Certificate not found or has been revoked."
         );
       } finally {
         if (!cancelled) {
@@ -142,7 +142,9 @@ const VerifyCertificate = () => {
         </h1>
 
         <div className={styles.errorContainer}>
-          <div className={styles.errorIcon}>✕</div>
+          <div className={styles.errorIcon}>
+            <ShieldAlert size={30} />
+          </div>
           <h3>Invalid Certificate ID</h3>
           <p>{error || "Certificate data could not be loaded."}</p>
         </div>

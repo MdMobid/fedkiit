@@ -1,8 +1,6 @@
 "use client";
 
-
 import { useEffect } from "react";
-
 import errorImage from "../../assets/images/errorPage.jpg";
 import styles from "./styles/Error.module.scss";
 import { useRouter } from "next/navigation";
@@ -17,21 +15,27 @@ function Error() {
   }, []);
 
   const handleReturnToHome = () => {
-    router.push('/');
+    router.push("/");
   };
 
   return (
-    <div className={styles.errorImage}>
+    <div className={styles.errorContainer}>
       <div className={styles.box}>
-      <img src={errorImage.src} alt="Error Page" />
-      <p>The webpage you are looking for is currently under maintainence. Please try again later. If the problem continues, mail us at fedkiit@gmail.com
-      </p>
-      <button onClick={handleReturnToHome}>Return To Home</button>
+        <img src={errorImage.src} alt="Error Page" />
+        <p>
+          The webpage you are looking for is currently under maintenance or does
+          not exist. Please try again later. If the problem continues, mail us at{" "}
+          <a href="mailto:fedkiit@gmail.com" className={styles.emailLink}>
+            fedkiit@gmail.com
+          </a>
+          .
+        </p>
+        <button onClick={handleReturnToHome} className={styles.returnButton}>
+          Return To Home
+        </button>
       </div>
     </div>
   );
 }
 
 export default Error;
-
-

@@ -9,11 +9,21 @@ import ErrorPage from "@/src/views/Error/Error";
  */
 export default function NotFound() {
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Navbar />
-      <div className="page">
+      <main
+        className="page page--nav-offset"
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          padding: "2.5rem 1rem",
+        }}
+      >
         <ErrorPage />
-      </div>
+      </main>
       <Footer />
     </div>
   );
